@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: seatly
+
+  datasource:
+    # Non-default host ports: Gatekeeper's stack already owns 6379/8080 locally,
+    # and 5432 is often taken by a native Postgres install. See docker-compose.yml.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:seatly}
+    username: ${DB_USER:seatly}
+    password: ${DB_PASSWORD:seatly}
+    hikari:
+      # Deliberately small. Seat booking is contention-heavy, and stage 5 measures
+      # how lock waits behave when the pool is the bottleneck.
+      maximum-pool-size: 10
+      pool-name: seatly-cp
+
+  jpa:
+    # Flyway owns the schema. Hibernate is only allowed to check that its entity
+    # mappings agree with the migrated tables, never to create or alter them.
+    hibernate:
+      ddl-auto: validate
+    # Off by default here: leaving the session open for the whole request hides
+    # lazy-loading mistakes behind the view layer instead of failing loudly.
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+
+  threads:
+    virtual:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: seatly
+    description: Event ticket booking with seat-level concurrency control
+
+server:
+  port: ${SERVER_PORT:8090}
+
+logging:
+  level:
+    org.flywaydb: info

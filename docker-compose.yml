@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: seatly-postgres
+    environment:
+      POSTGRES_DB: seatly
+      POSTGRES_USER: seatly
+      POSTGRES_PASSWORD: seatly
+    ports:
+      - "5433:5432"
+    volumes:
+      - seatly-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seatly -d seatly"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: seatly-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - seatly-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  seatly-pgdata:
+  seatly-redisdata:

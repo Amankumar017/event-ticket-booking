@@ -1,0 +1,33 @@
+# Build output
+target/
+build/
+*.jar
+*.war
+
+# Working notes -- kept local on purpose
+docs/notes/
+
+# Node / Angular
+node_modules/
+.angular/
+dist/
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+nbproject/
+
+# OS
+.DS_Store
+Thumbs.db
