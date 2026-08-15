@@ -3,6 +3,7 @@ package com.seatly.booking;
 import com.seatly.event.EventSeat;
 import com.seatly.event.EventSeatRepository;
 import com.seatly.event.EventSeatStatus;
+import com.seatly.common.metrics.SeatlyMetrics;
 import com.seatly.event.stream.SeatChanges;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,17 +42,20 @@ public class HoldExpiryJob {
 	private final EventSeatRepository eventSeats;
 	private final SeatHoldGuard holdGuard;
 	private final SeatChanges seatChanges;
+	private final SeatlyMetrics metrics;
 	private final HoldProperties holdProperties;
 	private final Clock clock;
 	private final HoldExpiryJob self;
 
 	public HoldExpiryJob(BookingRepository bookings, EventSeatRepository eventSeats,
-			SeatHoldGuard holdGuard, SeatChanges seatChanges, HoldProperties holdProperties, Clock clock,
+			SeatHoldGuard holdGuard, SeatChanges seatChanges, SeatlyMetrics metrics,
+			HoldProperties holdProperties, Clock clock,
 			@Lazy HoldExpiryJob self) {
 		this.bookings = bookings;
 		this.eventSeats = eventSeats;
 		this.holdGuard = holdGuard;
 		this.seatChanges = seatChanges;
+		this.metrics = metrics;
 		this.holdProperties = holdProperties;
 		this.clock = clock;
 		this.self = self;
@@ -121,6 +125,7 @@ public class HoldExpiryJob {
 		released.forEach(EventSeat::release);
 		holdGuard.releaseAll(seatIds);
 		seatChanges.announce(released);
+		metrics.seatsReleased(released.size(), "expired");
 
 		return true;
 	}

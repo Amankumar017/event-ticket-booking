@@ -85,6 +85,10 @@ management:
   info:
     env:
       enabled: true
+  metrics:
+    tags:
+      # Every series carries this, so one Grafana can watch several deployments.
+      application: seatly
 
 info:
   app:

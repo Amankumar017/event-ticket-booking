@@ -3,6 +3,7 @@ package com.seatly.payment;
 import com.seatly.booking.Booking;
 import com.seatly.booking.BookingService;
 import com.seatly.booking.PaymentArrivedTooLateException;
+import com.seatly.common.metrics.SeatlyMetrics;
 import com.seatly.common.outbox.OutboxMessage;
 import com.seatly.common.outbox.OutboxMessageRepository;
 import org.slf4j.Logger;
@@ -39,14 +40,16 @@ public class PaymentWebhookService {
 	private final PaymentRepository payments;
 	private final BookingService bookings;
 	private final OutboxMessageRepository outbox;
+	private final SeatlyMetrics metrics;
 	private final Clock clock;
 
 	public PaymentWebhookService(WebhookEventRepository events, PaymentRepository payments,
-			BookingService bookings, OutboxMessageRepository outbox, Clock clock) {
+			BookingService bookings, OutboxMessageRepository outbox, SeatlyMetrics metrics, Clock clock) {
 		this.events = events;
 		this.payments = payments;
 		this.bookings = bookings;
 		this.outbox = outbox;
+		this.metrics = metrics;
 		this.clock = clock;
 	}
 
@@ -61,6 +64,7 @@ public class PaymentWebhookService {
 
 		if (events.existsByProviderEventId(payload.eventId())) {
 			log.info("Ignoring repeat delivery of webhook {}", payload.eventId());
+			metrics.webhookDelivery("duplicate");
 			return false;
 		}
 
@@ -82,6 +86,7 @@ public class PaymentWebhookService {
 			// about retrying would help.
 			log.warn("Webhook {} refers to unknown payment {}",
 					payload.eventId(), payload.paymentReference());
+			metrics.webhookDelivery("unknown-payment");
 			event.markProcessed(now);
 			return false;
 		}
@@ -90,6 +95,7 @@ public class PaymentWebhookService {
 			// A different delivery already settled this one. Not a repeat of the
 			// same event, so it is recorded, but there is nothing left to do.
 			log.info("Payment {} is already {}", payment.getProviderReference(), payment.getStatus());
+			metrics.webhookDelivery("already-settled");
 			event.markProcessed(now);
 			return false;
 		}
@@ -101,6 +107,7 @@ public class PaymentWebhookService {
 		}
 
 		event.markProcessed(now);
+		metrics.webhookDelivery("applied");
 		return true;
 	}
 

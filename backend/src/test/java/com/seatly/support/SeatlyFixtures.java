@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -59,6 +60,38 @@ public class SeatlyFixtures {
 		for (Seat seat : venue.getSections().get(0).getSeats()) {
 			eventSeats.save(new EventSeat(event, seat, 120_000L));
 		}
+		return event;
+	}
+
+	/** A hall with at least {@code seatCount} seats, all on sale at Rs 1,200. */
+	public Event largeVenueEvent(int seatCount) {
+		Venue venue = new Venue("Load Test Arena " + UUID.randomUUID(), "Mumbai");
+		SeatSection stalls = venue.addSection("Stalls", 1);
+
+		int perRow = 20;
+		int rows = (seatCount + perRow - 1) / perRow;
+		for (int row = 0; row < rows; row++) {
+			String label = String.format("%02d", row + 1);
+			for (int number = 1; number <= perRow; number++) {
+				stalls.addSeat(label, number);
+			}
+		}
+		venues.save(venue);
+
+		Instant now = Instant.now();
+		Event event = new Event(venue, "Load Test Performance",
+				now.plus(Duration.ofDays(7)),
+				now.minus(Duration.ofHours(1)),
+				now.plus(Duration.ofDays(6)));
+		event.openSales();
+		events.save(event);
+
+		List<EventSeat> priced = new ArrayList<>();
+		for (Seat seat : venue.getSections().get(0).getSeats()) {
+			priced.add(new EventSeat(event, seat, 120_000L));
+		}
+		eventSeats.saveAll(priced);
+
 		return event;
 	}
 

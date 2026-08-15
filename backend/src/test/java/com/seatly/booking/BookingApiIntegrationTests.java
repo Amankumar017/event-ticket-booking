@@ -215,6 +215,20 @@ class BookingApiIntegrationTests extends IntegrationTest {
 	}
 
 	/**
+	 * A path that does not exist is a 404, not a 500.
+	 * <p>
+	 * The catch-all handler used to swallow Spring's own "no such resource"
+	 * exception and report a server error, with a stack trace in the log, for
+	 * somebody mistyping a URL.
+	 */
+	@Test
+	void anUnknownPathIsA404() throws Exception {
+		mockMvc.perform(get("/api/nonsense").with(as(customer)))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.type").value("https://seatly.dev/problems/not-found"));
+	}
+
+	/**
 	 * A token shaped exactly like the one the auth endpoints issue, so these
 	 * requests take the same path through the filter chain that a real one does.
 	 */

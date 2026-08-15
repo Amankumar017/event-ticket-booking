@@ -4,6 +4,7 @@ import com.seatly.account.AppUser;
 import com.seatly.account.AppUserRepository;
 import com.seatly.account.CurrentAccount;
 import com.seatly.common.NotFoundException;
+import com.seatly.common.metrics.SeatlyMetrics;
 import com.seatly.common.outbox.OutboxMessage;
 import com.seatly.common.outbox.OutboxMessageRepository;
 import com.seatly.event.Event;
@@ -12,6 +13,7 @@ import com.seatly.event.EventSeat;
 import com.seatly.event.EventSeatRepository;
 import com.seatly.event.EventSeatStatus;
 import com.seatly.event.stream.SeatChanges;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -56,14 +58,17 @@ public class BookingService {
 	private final AppUserRepository users;
 	private final CurrentAccount currentAccount;
 	private final SeatChanges seatChanges;
+	private final SeatlyMetrics metrics;
 	private final SeatHoldGuard holdGuard;
 	private final HoldProperties holdProperties;
 	private final Clock clock;
+	private final BookingService self;
 
 	public BookingService(EventRepository events, EventSeatRepository eventSeats,
 			BookingRepository bookings, BookingSeatRepository bookingSeats, OutboxMessageRepository outbox,
 			BookingReferences references, AppUserRepository users, CurrentAccount currentAccount,
-			SeatChanges seatChanges, SeatHoldGuard holdGuard, HoldProperties holdProperties, Clock clock) {
+			SeatChanges seatChanges, SeatlyMetrics metrics, SeatHoldGuard holdGuard,
+			HoldProperties holdProperties, Clock clock, @Lazy BookingService self) {
 		this.events = events;
 		this.eventSeats = eventSeats;
 		this.bookings = bookings;
@@ -73,9 +78,11 @@ public class BookingService {
 		this.users = users;
 		this.currentAccount = currentAccount;
 		this.seatChanges = seatChanges;
+		this.metrics = metrics;
 		this.holdGuard = holdGuard;
 		this.holdProperties = holdProperties;
 		this.clock = clock;
+		this.self = self;
 	}
 
 	/**
@@ -85,8 +92,25 @@ public class BookingService {
 	 * sold: if payment does not arrive before {@code expiresAt}, the expiry job
 	 * gives the chairs back.
 	 */
-	@Transactional
 	public BookingView hold(BookingRequest request) {
+		long startedAt = System.nanoTime();
+		try {
+			BookingView held = self.holdSeats(request);
+			metrics.holdAttempt(SeatlyMetrics.HoldOutcome.GRANTED, System.nanoTime() - startedAt);
+			return held;
+		}
+		catch (SeatUnavailableException refused) {
+			metrics.holdAttempt(SeatlyMetrics.HoldOutcome.REFUSED, System.nanoTime() - startedAt);
+			throw refused;
+		}
+		catch (RuntimeException failure) {
+			metrics.holdAttempt(SeatlyMetrics.HoldOutcome.FAILED, System.nanoTime() - startedAt);
+			throw failure;
+		}
+	}
+
+	@Transactional
+	public BookingView holdSeats(BookingRequest request) {
 		Instant now = clock.instant();
 
 		Event event = events.findById(request.eventId())
@@ -172,6 +196,7 @@ public class BookingService {
 		booking.getLines().forEach(line -> line.getEventSeat().markSold());
 		holdGuard.releaseAll(seatIdsOf(booking));
 		seatChanges.announce(seatsOf(booking));
+		metrics.seatsSold(booking.getLines().size());
 		announceConfirmation(booking);
 
 		return BookingView.of(booking);
@@ -191,6 +216,7 @@ public class BookingService {
 			booking.cancel();
 			holdGuard.releaseAll(seatIdsOf(booking));
 			seatChanges.announce(seatsOf(booking));
+			metrics.seatsReleased(booking.getLines().size(), "cancelled");
 		}
 
 		return BookingView.of(booking);

@@ -1,0 +1,125 @@
+{
+  "uid": "seatly-overview",
+  "title": "Seatly",
+  "tags": ["seatly"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Hold attempts per second",
+      "description": "Granted against refused. A refusal is a correct answer: somebody else got the seat first.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(seatly_holds_total[1m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Hold latency",
+      "description": "Includes any wait for the seat lock, which is where contention shows up first.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(seatly_hold_duration_seconds_bucket[1m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(seatly_hold_duration_seconds_bucket[1m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(seatly_hold_duration_seconds_bucket[1m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Seats sold and released",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(seatly_seats_sold_total[1m]))", "legendFormat": "sold", "refId": "A" },
+        {
+          "expr": "sum by (reason) (rate(seatly_seats_released_total[1m]))",
+          "legendFormat": "released ({{reason}})",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Webhook deliveries",
+      "description": "A steady trickle of duplicates is normal: providers deliver at least once.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (rate(seatly_webhooks_total[1m]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Outbox pending",
+      "description": "Should sit at zero. A climb means confirmations are not reaching customers even though their bookings are fine.",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 10 },
+              { "color": "red", "value": 100 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [{ "expr": "seatly_outbox_pending", "refId": "A" }]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Redis hold guard",
+      "description": "Rejections here are requests that never reached the database. 'unavailable' means Redis is down and every request is going through.",
+      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum by (decision) (rate(seatly_hold_guard_total[1m]))",
+          "legendFormat": "{{decision}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Database connection pool",
+      "description": "Pending threads above zero means requests are queueing for a connection.",
+      "gridPos": { "h": 6, "w": 9, "x": 15, "y": 16 },
+      "targets": [
+        { "expr": "hikaricp_connections_active", "legendFormat": "active", "refId": "A" },
+        { "expr": "hikaricp_connections_pending", "legendFormat": "pending", "refId": "B" }
+      ]
+    }
+  ]
+}

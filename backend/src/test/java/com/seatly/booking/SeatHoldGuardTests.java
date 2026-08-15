@@ -32,6 +32,9 @@ class SeatHoldGuardTests extends IntegrationTest {
 	@Autowired
 	private StringRedisTemplate redis;
 
+	@Autowired
+	private com.seatly.common.metrics.SeatlyMetrics metrics;
+
 	@BeforeEach
 	void clearGuardKeys() {
 		Set<String> keys = redis.keys("seatly:hold:*");
@@ -89,7 +92,7 @@ class SeatHoldGuardTests extends IntegrationTest {
 		given(values.setIfAbsent(anyString(), anyString(), any(Duration.class)))
 				.willThrow(new QueryTimeoutException("Redis is not answering"));
 
-		SeatHoldGuard unreachable = new SeatHoldGuard(broken);
+		SeatHoldGuard unreachable = new SeatHoldGuard(broken, metrics);
 
 		assertThat(unreachable.tryClaimAll(List.of(1L, 2L), TTL)).isTrue();
 	}
@@ -99,7 +102,7 @@ class SeatHoldGuardTests extends IntegrationTest {
 		StringRedisTemplate broken = mock(StringRedisTemplate.class);
 		given(broken.delete(any(List.class))).willThrow(new QueryTimeoutException("nope"));
 
-		SeatHoldGuard unreachable = new SeatHoldGuard(broken);
+		SeatHoldGuard unreachable = new SeatHoldGuard(broken, metrics);
 
 		// No exception escapes: the keys expire on their own soon enough.
 		unreachable.releaseAll(List.of(1L));

@@ -21,6 +21,8 @@
 		     it ships docker-java 3.7, and older clients cannot talk to Docker
 		     Engine 29 (the 1.x line fails discovery with a bare HTTP 400). -->
 		<testcontainers.version>2.0.5</testcontainers.version>
+		<!-- Overridden to run the load test: -DexcludedTestGroups=none -->
+		<excludedTestGroups>load</excludedTestGroups>
 	</properties>
 
 	<dependencyManagement>
@@ -81,6 +83,14 @@
 			<artifactId>jackson-datatype-jsr310</artifactId>
 		</dependency>
 
+		<!-- Registers the /actuator/prometheus endpoint. Actuator alone exposes
+		     metrics as JSON; Prometheus needs its own text format. -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
@@ -139,6 +149,17 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- The load test takes minutes and reports numbers that depend on
+					     the machine, so it is kept out of the ordinary build. Run it
+					     deliberately:
+					     ./mvnw test -Dtest=SeatRushLoadTest -DexcludedTestGroups=none -->
+					<excludedGroups>${excludedTestGroups}</excludedGroups>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

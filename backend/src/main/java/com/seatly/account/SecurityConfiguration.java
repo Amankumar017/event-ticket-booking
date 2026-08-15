@@ -56,6 +56,11 @@ public class SecurityConfiguration {
 						// The simulated gateway only exists under the seed profile.
 						.requestMatchers("/api/dev/**").permitAll()
 						.requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+						// Prometheus scrapes without credentials. In a deployment the
+						// management endpoints belong on their own port, reachable only
+						// from inside the network; here they share one, so this is the
+						// narrowest rule that lets the scraper work.
+						.requestMatchers("/actuator/prometheus").permitAll()
 						.requestMatchers("/actuator/**").hasRole(Role.ADMIN.name())
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt ->

@@ -17,6 +17,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.URI;
 import java.util.LinkedHashMap;
@@ -120,6 +121,22 @@ public class ApiExceptionHandler {
 		problem.setTitle("Invalid request");
 		problem.setType(URI.create("https://seatly.dev/problems/invalid-request"));
 		problem.setProperty("errors", errors);
+		return problem;
+	}
+
+	/**
+	 * A URL that does not exist.
+	 * <p>
+	 * Needed explicitly, and found the hard way: without it the catch-all below
+	 * reported a plain 404 as a 500, complete with a stack trace in the log for
+	 * somebody mistyping a path.
+	 */
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ProblemDetail handleUnknownPath(NoResourceFoundException exception) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+				HttpStatus.NOT_FOUND, "No such endpoint.");
+		problem.setTitle("Not found");
+		problem.setType(URI.create("https://seatly.dev/problems/not-found"));
 		return problem;
 	}
 

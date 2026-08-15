@@ -1,5 +1,6 @@
 package com.seatly.booking;
 
+import com.seatly.common.metrics.SeatlyMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -42,9 +43,11 @@ public class SeatHoldGuard {
 	private static final String KEY_PREFIX = "seatly:hold:";
 
 	private final StringRedisTemplate redis;
+	private final SeatlyMetrics metrics;
 
-	public SeatHoldGuard(StringRedisTemplate redis) {
+	public SeatHoldGuard(StringRedisTemplate redis, SeatlyMetrics metrics) {
 		this.redis = redis;
+		this.metrics = metrics;
 	}
 
 	/**
@@ -61,16 +64,19 @@ public class SeatHoldGuard {
 			for (Long seatId : eventSeatIds) {
 				Boolean won = redis.opsForValue().setIfAbsent(key(seatId), "held", ttl);
 				if (!Boolean.TRUE.equals(won)) {
+					metrics.guardDecision("rejected");
 					releaseAll(claimed);
 					return false;
 				}
 				claimed.add(seatId);
 			}
+			metrics.guardDecision("allowed");
 			return true;
 		}
 		catch (DataAccessException redisUnavailable) {
 			log.warn("Seat hold guard unavailable, falling through to the database: {}",
 					redisUnavailable.getMessage());
+			metrics.guardDecision("unavailable");
 			releaseAll(claimed);
 			return true;
 		}
