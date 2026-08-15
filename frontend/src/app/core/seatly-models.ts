@@ -37,6 +37,33 @@ export interface SectionView {
   readonly rows: readonly RowView[];
 }
 
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'EXPIRED' | 'CANCELLED';
+
+export interface BookedSeat {
+  readonly eventSeatId: number;
+  readonly label: string;
+  readonly priceMinor: number;
+}
+
+export interface Booking {
+  readonly reference: string;
+  readonly eventId: number;
+  readonly status: BookingStatus;
+  readonly totalMinor: number;
+  readonly currency: string;
+  /** When the hold lapses. Null once the booking is no longer pending. */
+  readonly expiresAt: string | null;
+  readonly confirmedAt: string | null;
+  readonly seats: readonly BookedSeat[];
+}
+
+export interface HoldRequest {
+  readonly eventId: number;
+  readonly eventSeatIds: readonly number[];
+  readonly customerName: string;
+  readonly customerEmail: string;
+}
+
 export interface SeatMap {
   readonly eventId: number;
   readonly title: string;

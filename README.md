@@ -67,7 +67,31 @@ local services.
 | PostgreSQL  | 5433      |
 | Redis       | 6380      |
 
+## Booking a seat
+
+```
+POST   /api/bookings                            hold seats for five minutes
+POST   /api/bookings/{reference}/confirmation   turn a live hold into a sale
+POST   /api/bookings/{reference}/cancellation   give the seats back early
+GET    /api/bookings/{reference}                look one up
+GET    /api/events                              what is on sale
+GET    /api/events/{id}/seats                   the seating chart
+```
+
+A hold is a PENDING booking with a deadline. Confirm before it lapses and the
+seats are sold; miss it and they go back on sale — immediately, because
+availability is decided from the deadline itself rather than from a background
+job having caught up. The job exists to make the stored state agree.
+
+Failures come back as RFC 9457 problem documents, so `Seat A1 is no longer
+available` arrives as text a client can show rather than a status code it has to
+interpret.
+
 ## Status
 
-Under construction. The schema is owned by Flyway from the first migration
-onward; domain tables land next.
+Under construction. Seats can be browsed, held, confirmed and cancelled, and
+holds expire on their own. Payment, authentication and live seat updates are
+still to come.
+
+The concurrency work — what the unlocked version did under load, and what fixed
+it — is written up with its measurements in [docs/concurrency.md](docs/concurrency.md).

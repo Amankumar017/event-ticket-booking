@@ -3,6 +3,7 @@ package com.seatly.booking;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> {
@@ -23,5 +24,19 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> 
 	List<Long> findDoubleBookedSeatIds();
 
 	long countByEventSeatId(Long eventSeatId);
+
+	/**
+	 * Live claims on any of these seats, with the bookings behind them.
+	 * <p>
+	 * Used to find the claim a lapsed hold left behind, so that whoever takes the
+	 * seat next can retire it.
+	 */
+	@Query("""
+			select bs from BookingSeat bs
+			join fetch bs.booking
+			where bs.eventSeat.id in :eventSeatIds
+			  and bs.active = true
+			""")
+	List<BookingSeat> findLiveClaims(Collection<Long> eventSeatIds);
 
 }

@@ -9,6 +9,8 @@ public record BookingView(
 		BookingStatus status,
 		long totalMinor,
 		String currency,
+		/** When the hold lapses. Null once the booking is no longer pending. */
+		Instant expiresAt,
 		Instant confirmedAt,
 		List<BookedSeat> seats) {
 
@@ -29,6 +31,7 @@ public record BookingView(
 				booking.getStatus(),
 				booking.getTotalMinor(),
 				booking.getCurrency(),
+				booking.getExpiresAt(),
 				booking.getConfirmedAt(),
 				seats);
 	}

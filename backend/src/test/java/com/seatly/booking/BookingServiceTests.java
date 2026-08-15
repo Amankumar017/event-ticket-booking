@@ -17,11 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Single-threaded behaviour of the booking service.
- * <p>
- * Everything here passes. That is the point worth sitting with: a suite like
- * this is what most implementations are shipped on, and it says nothing at all
- * about what happens when two customers arrive at once.
+ * Single-threaded behaviour of the hold-then-confirm flow.
  */
 @Transactional
 class BookingServiceTests extends IntegrationTest {
@@ -33,30 +29,36 @@ class BookingServiceTests extends IntegrationTest {
 	private EventSeatRepository eventSeats;
 
 	@Autowired
+	private BookingRepository bookings;
+
+	@Autowired
 	private SeatlyFixtures fixtures;
 
 	@Test
-	void sellsTheRequestedSeats() {
+	void holdingSeatsStartsTheClockWithoutSellingAnything() {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 
-		BookingView booking = bookingService.book(request(event, seats.get(0), seats.get(1)));
+		BookingView held = bookingService.hold(request(event, seats.get(0), seats.get(1)));
 
-		assertThat(booking.reference()).startsWith("SEAT-");
-		assertThat(booking.status()).isEqualTo(BookingStatus.CONFIRMED);
-		assertThat(booking.seats()).extracting(BookingView.BookedSeat::label)
+		assertThat(held.reference()).startsWith("SEAT-");
+		assertThat(held.status()).isEqualTo(BookingStatus.PENDING);
+		assertThat(held.expiresAt()).isNotNull();
+		assertThat(held.confirmedAt()).isNull();
+		assertThat(held.seats()).extracting(BookingView.BookedSeat::label)
 				.containsExactlyInAnyOrder("A1", "A2");
 	}
 
 	@Test
-	void marksTheSeatsSold() {
+	void heldSeatsCarryTheirDeadline() {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 
-		bookingService.book(request(event, seats.get(0)));
+		BookingView held = bookingService.hold(request(event, seats.get(0)));
 
-		assertThat(eventSeats.findById(seats.get(0).getId()).orElseThrow().getStatus())
-				.isEqualTo(EventSeatStatus.SOLD);
+		EventSeat first = eventSeats.findById(seats.get(0).getId()).orElseThrow();
+		assertThat(first.getStatus()).isEqualTo(EventSeatStatus.HELD);
+		assertThat(first.getHeldUntil()).isEqualTo(held.expiresAt());
 		assertThat(eventSeats.findById(seats.get(1).getId()).orElseThrow().getStatus())
 				.isEqualTo(EventSeatStatus.AVAILABLE);
 	}
@@ -66,31 +68,29 @@ class BookingServiceTests extends IntegrationTest {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 
-		BookingView booking = bookingService.book(request(event, seats.get(0), seats.get(1)));
+		BookingView held = bookingService.hold(request(event, seats.get(0), seats.get(1)));
 
-		assertThat(booking.totalMinor()).isEqualTo(240_000L);
-		assertThat(booking.currency()).isEqualTo("INR");
+		assertThat(held.totalMinor()).isEqualTo(240_000L);
+		assertThat(held.currency()).isEqualTo("INR");
 	}
 
-	/** Sequentially, the check does exactly what it looks like it does. */
 	@Test
-	void refusesASeatThatHasAlreadyBeenSold() {
+	void refusesASeatSomebodyElseIsHolding() {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
-		bookingService.book(request(event, seats.get(0)));
+		bookingService.hold(request(event, seats.get(0)));
 
-		assertThatThrownBy(() -> bookingService.book(request(event, seats.get(0))))
-				.isInstanceOf(SeatUnavailableException.class)
-				.hasMessageContaining("A1");
+		assertThatThrownBy(() -> bookingService.hold(request(event, seats.get(0))))
+				.isInstanceOf(SeatUnavailableException.class);
 	}
 
 	@Test
-	void refusesToSellWhenTheEventIsNotOnSale() {
+	void refusesToHoldWhenTheEventIsNotOnSale() {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 		event.closeSales();
 
-		assertThatThrownBy(() -> bookingService.book(request(event, seats.get(0))))
+		assertThatThrownBy(() -> bookingService.hold(request(event, seats.get(0))))
 				.isInstanceOf(SeatUnavailableException.class)
 				.hasMessageContaining("not on sale");
 	}
@@ -99,18 +99,99 @@ class BookingServiceTests extends IntegrationTest {
 	void refusesASeatThatDoesNotExist() {
 		Event event = fixtures.onSaleEvent();
 
-		assertThatThrownBy(() -> bookingService.book(new BookingRequest(
+		assertThatThrownBy(() -> bookingService.hold(new BookingRequest(
 				event.getId(), List.of(999_999L), "Aman", "aman@example.com")))
 				.isInstanceOf(NotFoundException.class);
+	}
+
+	@Test
+	void confirmingTurnsTheHoldIntoASale() {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		BookingView held = bookingService.hold(request(event, seats.get(0)));
+
+		BookingView confirmed = bookingService.confirm(held.reference());
+
+		assertThat(confirmed.status()).isEqualTo(BookingStatus.CONFIRMED);
+		assertThat(confirmed.confirmedAt()).isNotNull();
+		assertThat(confirmed.expiresAt()).isNull();
+		assertThat(eventSeats.findById(seats.get(0).getId()).orElseThrow().getStatus())
+				.isEqualTo(EventSeatStatus.SOLD);
+	}
+
+	/** A double-clicked confirm button must not be an error. */
+	@Test
+	void confirmingTwiceIsTheSameAsConfirmingOnce() {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		BookingView held = bookingService.hold(request(event, seats.get(0)));
+
+		BookingView first = bookingService.confirm(held.reference());
+		BookingView second = bookingService.confirm(held.reference());
+
+		assertThat(second.status()).isEqualTo(BookingStatus.CONFIRMED);
+		assertThat(second.confirmedAt()).isEqualTo(first.confirmedAt());
+	}
+
+	@Test
+	void cancellingGivesTheSeatsBack() {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		BookingView held = bookingService.hold(request(event, seats.get(0)));
+
+		BookingView cancelled = bookingService.cancel(held.reference());
+
+		assertThat(cancelled.status()).isEqualTo(BookingStatus.CANCELLED);
+		assertThat(eventSeats.findById(seats.get(0).getId()).orElseThrow().getStatus())
+				.isEqualTo(EventSeatStatus.AVAILABLE);
+	}
+
+	/** The claim is kept as history, but it no longer holds the chair. */
+	@Test
+	void cancellingLeavesTheClaimBehindButNotActive() {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		BookingView held = bookingService.hold(request(event, seats.get(0)));
+		bookingService.cancel(held.reference());
+
+		Booking cancelled = bookings.findByReference(held.reference()).orElseThrow();
+
+		assertThat(cancelled.getLines()).hasSize(1);
+		assertThat(cancelled.getLines().get(0).isActive()).isFalse();
+	}
+
+	/** And the seat can be sold to somebody else afterwards. */
+	@Test
+	void aCancelledSeatCanBeHeldAgain() {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		BookingView first = bookingService.hold(request(event, seats.get(0)));
+		bookingService.cancel(first.reference());
+
+		BookingView second = bookingService.hold(request(event, seats.get(0)));
+
+		assertThat(second.status()).isEqualTo(BookingStatus.PENDING);
+		assertThat(second.reference()).isNotEqualTo(first.reference());
+	}
+
+	@Test
+	void aConfirmedBookingCannotBeCancelledHere() {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		BookingView held = bookingService.hold(request(event, seats.get(0)));
+		bookingService.confirm(held.reference());
+
+		assertThatThrownBy(() -> bookingService.cancel(held.reference()))
+				.isInstanceOf(SeatUnavailableException.class);
 	}
 
 	@Test
 	void findsABookingByItsReference() {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
-		BookingView booked = bookingService.book(request(event, seats.get(0)));
+		BookingView held = bookingService.hold(request(event, seats.get(0)));
 
-		assertThat(bookingService.byReference(booked.reference()).seats()).hasSize(1);
+		assertThat(bookingService.byReference(held.reference()).seats()).hasSize(1);
 	}
 
 	private BookingRequest request(Event event, EventSeat... seats) {

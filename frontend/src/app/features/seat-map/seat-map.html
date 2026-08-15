@@ -52,14 +52,76 @@
       <li><span class="swatch seat--sold"></span> Sold</li>
     </ul>
 
-    @if (selectedCount() > 0) {
+    @if (problem(); as message) {
+      <p class="state state--error" role="alert">{{ message }}</p>
+    }
+
+    @if (booking(); as held) {
+      <div class="summary summary--held">
+        @switch (held.status) {
+          @case ('PENDING') {
+            @if (holdHasLapsed()) {
+              <span class="summary__text">
+                Your hold on
+                {{ held.seats.length }} seat{{ held.seats.length === 1 ? '' : 's' }} has expired.
+              </span>
+              <button type="button" class="summary__action" (click)="startAgain()">
+                Choose again
+              </button>
+            } @else {
+              <span class="summary__text">
+                Holding {{ held.seats.length }} seat{{ held.seats.length === 1 ? '' : 's' }} ·
+                {{ held.totalMinor | minorCurrency: held.currency }} ·
+                <strong class="summary__clock">{{ timeLeft() }}</strong> left
+              </span>
+              <span class="summary__buttons">
+                <button
+                  type="button"
+                  class="summary__action summary__action--ghost"
+                  [disabled]="working()"
+                  (click)="cancel()"
+                >
+                  Release
+                </button>
+                <button
+                  type="button"
+                  class="summary__action summary__action--primary"
+                  [disabled]="working()"
+                  (click)="confirm()"
+                >
+                  Confirm
+                </button>
+              </span>
+            }
+          }
+          @case ('CONFIRMED') {
+            <span class="summary__text">
+              Booked · reference <strong>{{ held.reference }}</strong> ·
+              {{ held.totalMinor | minorCurrency: held.currency }}
+            </span>
+            <button type="button" class="summary__action" (click)="startAgain()">Done</button>
+          }
+          @default {
+            <span class="summary__text">This booking is {{ held.status.toLowerCase() }}.</span>
+            <button type="button" class="summary__action" (click)="startAgain()">
+              Choose again
+            </button>
+          }
+        }
+      </div>
+    } @else if (selectedCount() > 0) {
       <div class="summary">
         <span class="summary__text">
           {{ selectedCount() }} seat{{ selectedCount() === 1 ? '' : 's' }} ·
           {{ selectedTotalMinor() | minorCurrency: seatMap.currency }}
         </span>
-        <button type="button" class="summary__action" disabled>
-          Booking arrives in stage 4
+        <button
+          type="button"
+          class="summary__action summary__action--primary"
+          [disabled]="working()"
+          (click)="hold()"
+        >
+          Hold these seats
         </button>
       </div>
     }

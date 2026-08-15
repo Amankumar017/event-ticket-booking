@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -24,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 
 /**
  * Eight customers, one seat, three strategies.
@@ -41,6 +44,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Eight ordinary callers start at the same instant and the results are counted.
  * The measurements for the unlocked version this replaced are kept in
  * {@code docs/concurrency.md}.
+ *
+ * <h2>The Redis guard is switched off here</h2>
+ *
+ * {@link SeatHoldGuard} would reject seven of these callers before they reached
+ * the database, which is what it is for -- and it would also mean this test
+ * proved nothing about the database. It is stubbed to the answer it gives when
+ * Redis is unreachable: no opinion, carry on. Everything measured below is the
+ * database's doing, which is the claim worth being able to make.
  */
 class BookingUnderContentionTest extends IntegrationTest {
 
@@ -66,12 +77,18 @@ class BookingUnderContentionTest extends IntegrationTest {
 	@Autowired
 	private PlatformTransactionManager transactionManager;
 
+	@MockitoBean
+	private SeatHoldGuard holdGuard;
+
 	private Long eventId;
 	private Long contestedSeatId;
 	private List<Long> allSeatIds;
 
 	@BeforeEach
 	void setUp() {
+		// Exactly what the guard returns when Redis cannot be reached.
+		given(holdGuard.tryClaimAll(any(), any())).willReturn(true);
+
 		fixtures.wipe();
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
@@ -96,7 +113,7 @@ class BookingUnderContentionTest extends IntegrationTest {
 
 		runTogether(number -> {
 			try {
-				bookingService.book(new BookingRequest(
+				bookingService.hold(new BookingRequest(
 						eventId, List.of(contestedSeatId),
 						"Customer " + number, "customer" + number + "@example.com"));
 				sold.incrementAndGet();
@@ -251,7 +268,7 @@ class BookingUnderContentionTest extends IntegrationTest {
 				pool.submit(() -> {
 					try {
 						startTogether.await(10, TimeUnit.SECONDS);
-						bookingService.book(new BookingRequest(
+						bookingService.hold(new BookingRequest(
 								eventId, order, "Customer " + contender,
 								"customer" + contender + "@example.com"));
 						sold.incrementAndGet();

@@ -205,3 +205,59 @@ live claims on the seat  : 1
 Neither layer makes the other redundant. The lock gives customers a clear
 answer; the index guarantees the invariant regardless of which code path, script
 or future refactoring does the writing.
+
+## Holds, and what expiry does to all of this
+
+A seat is now held for five minutes rather than sold outright, which introduces a
+second question: when exactly does a hold stop counting?
+
+**The deadline is the answer, not the job.** `EventSeat.isClaimableAt` works it
+out from `held_until`, so a lapsed seat is available the instant its deadline
+passes — whether or not the expiry job has run, is running late, or has never
+been started. The job only makes the *stored* state agree: statuses back to
+AVAILABLE, claims retired, bookings marked EXPIRED. Reports and indexes read
+stored state, so leaving it stale would be its own kind of wrong; it just would
+not oversell anything.
+
+That split has a consequence which cost a test failure to find. A lapsed hold
+leaves a `booking_seat` row still marked `active`, and the partial unique index
+counts it. The seat is free, the customer is entitled to it, and the insert is
+rejected for a row that should no longer mean anything:
+
+```
+ERROR: duplicate key value violates unique constraint "booking_seat_one_live_claim_per_seat"
+  Detail: Key (event_seat_id)=(1) already exists.
+```
+
+Waiting for the job would have been the wrong fix — it would make the deadline
+advisory again. Instead whoever takes the seat retires the claim they are
+superseding, in the same transaction, under the same lock. And the retirement has
+to be flushed before the new claim is inserted, because Hibernate would otherwise
+send the insert first and have the database reject it against the very row being
+retired. The same statement-ordering rule that deadlocked the unlocked booking
+path, showing up a second time in a completely different place.
+
+## Where Redis fits, and where it does not
+
+`SeatHoldGuard` keeps a key per held seat with the same TTL as the hold. It
+exists to turn away callers who are provably too late before they open a
+transaction and queue on a row lock behind everybody else.
+
+It is **not** where holds live, and it never decides anything on its own:
+
+- When it says *taken*, it is right, and the caller is refused.
+- When it says *go ahead*, it is guessing, and the database decides.
+- When Redis is unreachable, every method fails open and the request proceeds
+  exactly as it would have. Correctness never depends on it being available.
+
+`BookingUnderContentionTest` stubs the guard to that fail-open answer for exactly
+this reason. Left switched on it would reject seven of the eight contenders
+before they reached Postgres, and the measurements above would be testing Redis
+rather than the lock they exist to prove.
+
+One property is worth stating plainly, because it is the reason the guard cannot
+be trusted with the decision: its TTL runs on Redis's wall clock, which the
+application's injected `Clock` cannot move. In production both run on real time
+and lapse together. In a test that fast-forwards six minutes, they disagree —
+and a design where the two disagreeing could oversell a seat would be a bad
+design.

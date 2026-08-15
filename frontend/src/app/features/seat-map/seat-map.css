@@ -156,15 +156,48 @@
   font-variant-numeric: tabular-nums;
 }
 
+.summary--held {
+  border-color: var(--accent);
+}
+
+.summary__clock {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.summary__buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .summary__action {
   padding: 0.5rem 1rem;
   border: 1px solid var(--border);
   border-radius: 0.4rem;
   background: transparent;
-  color: var(--muted);
+  color: var(--text);
   font: inherit;
   font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.summary__action:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.summary__action:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.summary__action--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.summary__action--ghost {
+  color: var(--muted);
 }
 
 .state {

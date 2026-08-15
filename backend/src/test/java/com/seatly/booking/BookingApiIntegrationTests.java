@@ -33,7 +33,7 @@ class BookingApiIntegrationTests extends IntegrationTest {
 	private SeatlyFixtures fixtures;
 
 	@Test
-	void booksSeatsAndReturns201() throws Exception {
+	void holdsSeatsAndReturns201() throws Exception {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 
@@ -44,13 +44,54 @@ class BookingApiIntegrationTests extends IntegrationTest {
 								List.of(seats.get(0).getId(), seats.get(1).getId()),
 								"Aman", "aman@example.com"))))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.status").value("CONFIRMED"))
+				.andExpect(jsonPath("$.status").value("PENDING"))
+				.andExpect(jsonPath("$.expiresAt").isNotEmpty())
 				.andExpect(jsonPath("$.totalMinor").value(240000))
 				.andExpect(jsonPath("$.seats.length()").value(2));
 	}
 
 	@Test
-	void refusesAnAlreadySoldSeatWith409() throws Exception {
+	void confirmsAHoldAndSellsTheSeats() throws Exception {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		String reference = holdReference(event, seats.get(0));
+
+		mockMvc.perform(post("/api/bookings/{reference}/confirmation", reference))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("CONFIRMED"))
+				.andExpect(jsonPath("$.confirmedAt").isNotEmpty());
+
+		mockMvc.perform(get("/api/events/{id}/seats", event.getId()))
+				.andExpect(jsonPath("$.sections[0].rows[0].seats[0].status").value("SOLD"));
+	}
+
+	@Test
+	void cancellingAHoldPutsTheSeatBackOnSale() throws Exception {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		String reference = holdReference(event, seats.get(0));
+
+		mockMvc.perform(post("/api/bookings/{reference}/cancellation", reference))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("CANCELLED"));
+
+		mockMvc.perform(get("/api/events/{id}/seats", event.getId()))
+				.andExpect(jsonPath("$.sections[0].rows[0].seats[0].status").value("AVAILABLE"));
+	}
+
+	@Test
+	void aHeldSeatShowsAsHeldOnTheSeatMap() throws Exception {
+		Event event = fixtures.onSaleEvent();
+		List<EventSeat> seats = fixtures.seatsOf(event);
+		holdReference(event, seats.get(0));
+
+		mockMvc.perform(get("/api/events/{id}/seats", event.getId()))
+				.andExpect(jsonPath("$.sections[0].rows[0].seats[0].status").value("HELD"))
+				.andExpect(jsonPath("$.sections[0].rows[0].seats[1].status").value("AVAILABLE"));
+	}
+
+	@Test
+	void refusesAnAlreadyHeldSeatWith409() throws Exception {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 		String body = json.writeValueAsString(new BookingRequest(
@@ -59,10 +100,13 @@ class BookingApiIntegrationTests extends IntegrationTest {
 		mockMvc.perform(post("/api/bookings").contentType(MediaType.APPLICATION_JSON).content(body))
 				.andExpect(status().isCreated());
 
+		// Detail is not asserted exactly: this request is turned away by the Redis
+		// guard before it reaches the database, and either refusal is a correct
+		// answer to the same question.
 		mockMvc.perform(post("/api/bookings").contentType(MediaType.APPLICATION_JSON).content(body))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.type").value("https://seatly.dev/problems/seat-unavailable"))
-				.andExpect(jsonPath("$.detail").value("Seat A1 is no longer available"));
+				.andExpect(jsonPath("$.detail").isNotEmpty());
 	}
 
 	/**
@@ -107,6 +151,18 @@ class BookingApiIntegrationTests extends IntegrationTest {
 		mockMvc.perform(get("/api/bookings/{reference}", "SEAT-NOPE1234"))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.type").value("https://seatly.dev/problems/not-found"));
+	}
+
+	/** Holds one seat and hands back the reference. */
+	private String holdReference(Event event, EventSeat seat) throws Exception {
+		String created = mockMvc.perform(post("/api/bookings")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json.writeValueAsString(new BookingRequest(
+								event.getId(), List.of(seat.getId()), "Aman", "aman@example.com"))))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+
+		return json.readTree(created).get("reference").asText();
 	}
 
 }

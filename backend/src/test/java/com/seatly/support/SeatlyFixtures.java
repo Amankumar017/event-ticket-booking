@@ -8,12 +8,14 @@ import com.seatly.venue.Seat;
 import com.seatly.venue.SeatSection;
 import com.seatly.venue.Venue;
 import com.seatly.venue.VenueRepository;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -26,13 +28,15 @@ public class SeatlyFixtures {
 	private final EventRepository events;
 	private final EventSeatRepository eventSeats;
 	private final JdbcTemplate jdbc;
+	private final StringRedisTemplate redis;
 
 	public SeatlyFixtures(VenueRepository venues, EventRepository events,
-			EventSeatRepository eventSeats, JdbcTemplate jdbc) {
+			EventSeatRepository eventSeats, JdbcTemplate jdbc, StringRedisTemplate redis) {
 		this.venues = venues;
 		this.events = events;
 		this.eventSeats = eventSeats;
 		this.jdbc = jdbc;
+		this.redis = redis;
 	}
 
 	/** A three-seat hall with one event on sale, priced at Rs 1,200 a seat. */
@@ -63,16 +67,25 @@ public class SeatlyFixtures {
 	}
 
 	/**
-	 * Wipes every domain table.
+	 * Wipes every domain table, and the Redis guard keys with them.
 	 * <p>
 	 * Needed by tests that cannot roll back -- a concurrency test has to commit
 	 * its transactions for the race to exist at all.
+	 * <p>
+	 * Redis has to be cleared too. {@code restart identity} hands the next test
+	 * the same seat ids, and a guard key left over from the previous one would
+	 * turn its first caller away for a seat that no longer exists.
 	 */
 	public void wipe() {
 		jdbc.execute("""
 				truncate table booking_seat, booking, event_seat, seat, seat_section, event, venue
 				restart identity cascade
 				""");
+
+		Set<String> guardKeys = redis.keys("seatly:hold:*");
+		if (guardKeys != null && !guardKeys.isEmpty()) {
+			redis.delete(guardKeys);
+		}
 	}
 
 }
