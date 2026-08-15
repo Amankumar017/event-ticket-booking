@@ -27,6 +27,16 @@ public class BookingSeat extends BaseEntity {
 	@Column(name = "price_minor", nullable = false)
 	private long priceMinor;
 
+	/**
+	 * Whether this line still claims the seat.
+	 * <p>
+	 * Backs the partial unique index that allows at most one live claim per seat.
+	 * Cancelling a booking clears the flag rather than deleting the row, so the
+	 * chair can be resold without losing the record of who held it.
+	 */
+	@Column(name = "active", nullable = false)
+	private boolean active = true;
+
 	/** Required by JPA. */
 	protected BookingSeat() {
 	}
@@ -35,6 +45,15 @@ public class BookingSeat extends BaseEntity {
 		this.booking = booking;
 		this.eventSeat = eventSeat;
 		this.priceMinor = priceMinor;
+	}
+
+	/** Gives the chair back, keeping the record that this booking once held it. */
+	public void releaseClaim() {
+		this.active = false;
+	}
+
+	public boolean isActive() {
+		return active;
 	}
 
 	public Booking getBooking() {

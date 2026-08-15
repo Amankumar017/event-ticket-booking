@@ -10,6 +10,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.Instant;
 
@@ -50,6 +51,20 @@ public class EventSeat extends BaseEntity {
 	/** When the current hold lapses. Null unless {@code status} is HELD. */
 	@Column(name = "held_until")
 	private Instant heldUntil;
+
+	/**
+	 * Optimistic lock stamp.
+	 * <p>
+	 * Every update Hibernate writes carries {@code where version = ?} and bumps
+	 * the value. A second transaction that read the row earlier finds its update
+	 * matches nothing and fails rather than overwriting work it never saw.
+	 * <p>
+	 * The booking path does not rely on this -- it takes a real lock before it
+	 * reads. This is the safety net for every other write path.
+	 */
+	@Version
+	@Column(name = "version", nullable = false)
+	private long version;
 
 	/** Required by JPA. */
 	protected EventSeat() {

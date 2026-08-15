@@ -15,34 +15,26 @@ import java.util.List;
 /**
  * Sells seats.
  *
- * <h2>This implementation is not safe under concurrency, on purpose</h2>
+ * <h2>Why the lock comes before the check</h2>
  *
- * Read the seats, check they are free, write them as sold. It is the obvious way
- * to write this, it passes every single-threaded test in
- * {@code BookingServiceTests}, and it is wrong.
+ * An earlier version of this class read the seats, checked they were free, and
+ * then wrote them as sold. It passed every single-threaded test and failed two
+ * different ways under load -- deadlocking seven callers out of eight, or, with
+ * the writes reordered, quietly selling one chair to all eight. Both
+ * measurements are in {@code docs/concurrency.md}.
  * <p>
- * The check and the write are two separate steps with nothing holding the seat
- * in between. Under PostgreSQL's default READ COMMITTED isolation, eight
- * requests for the same seat all run {@code isClaimableAt} before any of them
- * writes, and all eight conclude the seat is free.
+ * Both failures had the same cause: a decision made from a row that nothing was
+ * holding. So the first thing this method does with a seat is take an exclusive
+ * lock on it, and only then ask whether it is free. A competing transaction
+ * blocks on that lock, and by the time it is let through the seat is already
+ * sold -- which it sees, and reports honestly.
  * <p>
- * What happens next depends on the order the statements reach the database --
- * which Hibernate decides, not this method. Both outcomes are measured in
- * {@code NaiveBookingUnderContentionTest}:
- * <ul>
- * <li><b>As written here</b>, Hibernate flushes the inserts before the update.
- * Inserting into {@code booking_seat} takes a foreign-key lock on the
- * {@code event_seat} row it points at; the update then needs an exclusive lock
- * on that same row, which every other transaction is also holding a
- * foreign-key lock on. They wait on each other and PostgreSQL kills all but one
- * with SQLSTATE 40P01. Seven of eight customers get an internal error.</li>
- * <li><b>With the seat update forced out first</b>, there is no deadlock: the
- * transactions queue politely on the row lock, each one re-reads after the
- * previous commits, and every one of them sells the same seat. Eight bookings,
- * one chair, no error anywhere.</li>
- * </ul>
- * The second is the worse bug, and it is the one that looks like nothing is
- * wrong. Stage 5 fixes the cause both share.
+ * Optimistic locking would also prevent the double sale, and
+ * {@code BookingUnderContentionTest} measures it doing so. It is the wrong tool
+ * here: on a single seat that many people want at once, every loser does its
+ * work and throws it away. Pessimistic locking makes them wait instead, which
+ * costs less and gives a clearer answer. The {@code @Version} column stays as a
+ * safety net for write paths that do not lock.
  */
 @Service
 public class BookingService {
@@ -72,12 +64,18 @@ public class BookingService {
 			throw new SeatUnavailableException("This event is not on sale");
 		}
 
-		List<EventSeat> seats = eventSeats.findAllById(request.eventSeatIds());
-		if (seats.size() != request.eventSeatIds().size()) {
+		// Sorted and de-duplicated: sorted so that overlapping bookings always
+		// take their locks in the same order, de-duplicated so that asking for
+		// the same seat twice cannot claim it twice.
+		List<Long> seatIds = request.eventSeatIds().stream().distinct().sorted().toList();
+
+		// ---- the lock, before anything is decided ----
+		List<EventSeat> seats = eventSeats.lockAllById(seatIds);
+		if (seats.size() != seatIds.size()) {
 			throw new NotFoundException("One or more of those seats does not exist");
 		}
 
-		// ---- the check ----
+		// ---- the check, now that nobody else can be reading these rows ----
 		for (EventSeat seat : seats) {
 			if (!seat.getEvent().getId().equals(event.getId())) {
 				throw new SeatUnavailableException(
@@ -89,7 +87,7 @@ public class BookingService {
 			}
 		}
 
-		// ---- and the write. Nothing holds the seats between the two. ----
+		// ---- and the write, under the lock taken above ----
 		Booking booking = new Booking(
 				references.next(), event, request.customerName(), request.customerEmail(), null);
 		seats.forEach(booking::addSeat);
