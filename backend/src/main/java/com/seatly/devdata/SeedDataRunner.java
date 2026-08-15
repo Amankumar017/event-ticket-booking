@@ -21,6 +21,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +44,8 @@ public class SeedDataRunner implements ApplicationRunner {
 	private static final String VENUE_NAME = "Prithvi Playhouse";
 
 	private static final String DEMO_PASSWORD = "seatly-demo-pass";
+
+	private static final ZoneId HOUSE_TIME = ZoneId.of("Asia/Kolkata");
 
 	private final VenueRepository venues;
 	private final EventRepository events;
@@ -74,13 +78,21 @@ public class SeedDataRunner implements ApplicationRunner {
 		Venue venue = buildVenue();
 		venues.save(venue);
 
+		// An evening performance starts in the evening. Taking the time of day from
+		// whenever the seeder happened to run gave a recital at 8:39 in the morning.
 		Instant now = Instant.now();
+		Instant curtainUp = LocalDate.now(HOUSE_TIME)
+				.plusDays(21)
+				.atTime(19, 30)
+				.atZone(HOUSE_TIME)
+				.toInstant();
+
 		Event event = new Event(
 				venue,
 				"An Evening of Hindustani Classical",
-				now.plus(Duration.ofDays(21)),
+				curtainUp,
 				now.minus(Duration.ofDays(1)),
-				now.plus(Duration.ofDays(20)));
+				curtainUp.minus(Duration.ofHours(2)));
 		event.openSales();
 		events.save(event);
 

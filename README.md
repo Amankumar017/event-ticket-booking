@@ -1,6 +1,10 @@
 # Seatly
 
+[![CI](https://github.com/Amankumar017/event-ticket-booking/actions/workflows/ci.yml/badge.svg)](https://github.com/Amankumar017/event-ticket-booking/actions/workflows/ci.yml)
+
 Event ticket booking with seat-level concurrency control.
+
+![The seating chart, lit from the stage](docs/images/seat-map.png)
 
 Selling a numbered seat is one of the few genuinely hard problems hiding inside
 an ordinary CRUD application: the moment two people click the same seat in the
@@ -8,6 +12,12 @@ same instant, correctness depends entirely on how the write is serialised.
 Seatly exists to work that problem end to end: a naive implementation that
 demonstrably double-books, the measurements that expose it, and the locking
 strategy that fixes it.
+
+The stage is the only light in the room, and it falls off across the rows. The
+stalls sit in it, the balcony sits at the edge of it, and that is also the price
+gradient: in this hall the closer seats cost more.
+
+![What's on](docs/images/whats-on.png)
 
 ## Stack
 
