@@ -76,6 +76,17 @@ public class EventSeat extends BaseEntity {
 		};
 	}
 
+	/**
+	 * The status as a customer should see it at the given moment.
+	 * <p>
+	 * A hold that has run out reads as AVAILABLE even though the column still
+	 * says HELD. The deadline is the truth; the row is tidied up later by a
+	 * background job, and the seat map must not wait for it.
+	 */
+	public EventSeatStatus effectiveStatusAt(Instant moment) {
+		return isClaimableAt(moment) ? EventSeatStatus.AVAILABLE : status;
+	}
+
 	public void holdUntil(Instant deadline) {
 		this.status = EventSeatStatus.HELD;
 		this.heldUntil = deadline;

@@ -40,6 +40,11 @@ spring:
     virtual:
       enabled: true
 
+seatly:
+  cors:
+    # The Angular dev server. A deployment overrides this with its real origin.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+
 management:
   endpoints:
     web:
