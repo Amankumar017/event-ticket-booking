@@ -120,7 +120,7 @@ describe('SeatMapPage holding seats', () => {
     expect(html(fixture).querySelector('.summary__clock')?.textContent).toMatch(/^[45]:\d{2}$/);
   });
 
-  it('offers confirm and release while the hold is live', async () => {
+  it('offers pay and release while the hold is live', async () => {
     const fixture = await render();
 
     await holdA1(fixture, heldBooking());
@@ -128,16 +128,37 @@ describe('SeatMapPage holding seats', () => {
     const buttons = Array.from(html(fixture).querySelectorAll('.summary__action')).map((button) =>
       button.textContent?.trim(),
     );
-    expect(buttons).toEqual(['Release', 'Confirm']);
+    expect(buttons).toEqual(['Release', 'Pay ₹1,200']);
   });
 
-  it('reports the reference once the booking is confirmed', async () => {
+  /**
+   * Paying is three calls: open the payment, settle it at the provider, then
+   * read back the booking the webhook has confirmed.
+   */
+  it('reports the reference once the booking is paid for', async () => {
     const fixture = await render();
     await holdA1(fixture, heldBooking());
 
     click(fixture, '.summary__action--primary');
+
+    const intent = httpMock.expectOne('/api/payments/intents/SEAT-ABCD2345');
+    expect(intent.request.headers.get('Idempotency-Key')).toBeTruthy();
+    intent.flush({
+      paymentReference: 'pay_abc123',
+      bookingReference: 'SEAT-ABCD2345',
+      amountMinor: 120_000,
+      currency: 'INR',
+      status: 'REQUIRES_PAYMENT',
+      failureReason: null,
+      settledAt: null,
+    });
+    await fixture.whenStable();
+
+    httpMock.expectOne('/api/dev/payments/pay_abc123/settle?outcome=succeeded').flush({ acted: true });
+    await fixture.whenStable();
+
     httpMock
-      .expectOne('/api/bookings/SEAT-ABCD2345/confirmation')
+      .expectOne('/api/bookings/SEAT-ABCD2345')
       .flush(heldBooking({ status: 'CONFIRMED', expiresAt: null, confirmedAt: '2026-08-15T12:00:00Z' }));
     await fixture.whenStable();
     fixture.detectChanges();
@@ -146,6 +167,31 @@ describe('SeatMapPage holding seats', () => {
     fixture.detectChanges();
 
     expect(html(fixture).querySelector('.summary__text')?.textContent).toContain('SEAT-ABCD2345');
+  });
+
+  /** The same key on a retry is what stops a timeout becoming two payments. */
+  it('reuses the idempotency key when a payment attempt fails', async () => {
+    const fixture = await render();
+    await holdA1(fixture, heldBooking());
+
+    click(fixture, '.summary__action--primary');
+    const first = httpMock.expectOne('/api/payments/intents/SEAT-ABCD2345');
+    const key = first.request.headers.get('Idempotency-Key');
+    first.flush(null, { status: 504, statusText: 'Gateway Timeout' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    httpMock.expectOne('/api/events/7/seats').flush(SEAT_MAP);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    click(fixture, '.summary__action--primary');
+    const retry = httpMock.expectOne('/api/payments/intents/SEAT-ABCD2345');
+
+    expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
+    retry.flush(null, { status: 504, statusText: 'Gateway Timeout' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    httpMock.expectOne('/api/events/7/seats').flush(SEAT_MAP);
   });
 
   /** A hold whose clock ran out must not offer a button the server would refuse. */

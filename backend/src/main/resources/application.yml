@@ -53,6 +53,14 @@ seatly:
     # Off locally so the cookie works over plain http; on everywhere else.
     cookie-secure: ${COOKIE_SECURE:false}
 
+  payments:
+    # Shared with the payment provider. Every webhook is signed with it, and an
+    # unsigned callback is how a stranger confirms their own booking for free.
+    webhook-secret: ${PAYMENT_WEBHOOK_SECRET:local-development-webhook-secret}
+
+  outbox:
+    sweep-every: 10s
+
   hold:
     # How long a customer gets to pay. Long enough to find a card, short enough
     # that a hall is not held hostage by people who wandered off.

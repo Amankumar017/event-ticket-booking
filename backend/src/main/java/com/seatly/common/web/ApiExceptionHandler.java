@@ -6,6 +6,8 @@ import com.seatly.account.InvalidCredentialsException;
 import com.seatly.account.InvalidRefreshTokenException;
 import com.seatly.booking.SeatUnavailableException;
 import com.seatly.common.NotFoundException;
+import com.seatly.common.idempotency.IdempotencyConflictException;
+import com.seatly.common.idempotency.IdempotencyKeyReusedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -64,6 +66,23 @@ public class ApiExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
 		problem.setTitle("Already registered");
 		problem.setType(URI.create("https://seatly.dev/problems/already-registered"));
+		return problem;
+	}
+
+	@ExceptionHandler(IdempotencyKeyReusedException.class)
+	public ProblemDetail handleKeyReused(IdempotencyKeyReusedException exception) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+				HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage());
+		problem.setTitle("Idempotency key reused");
+		problem.setType(URI.create("https://seatly.dev/problems/idempotency-key-reused"));
+		return problem;
+	}
+
+	@ExceptionHandler(IdempotencyConflictException.class)
+	public ProblemDetail handleIdempotencyConflict(IdempotencyConflictException exception) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+		problem.setTitle("Request in progress");
+		problem.setType(URI.create("https://seatly.dev/problems/request-in-progress"));
 		return problem;
 	}
 

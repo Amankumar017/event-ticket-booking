@@ -119,14 +119,29 @@ class HoldLifecycleTests extends IntegrationTest {
 		assertThat(second.status()).isEqualTo(BookingStatus.PENDING);
 	}
 
+	/**
+	 * Payment can arrive after the deadline and still be honoured, as long as
+	 * nobody else took the seats in the meantime. Refusing here would take money
+	 * for chairs that were sitting empty and give the customer nothing.
+	 */
 	@Test
-	void confirmingALapsedHoldIsRefused() {
+	void paymentArrivingLateIsHonouredWhileTheSeatsAreStillOurs() {
 		BookingView held = hold();
 		at(NOON.plus(Duration.ofMinutes(6)));
 
-		assertThatThrownBy(() -> bookingService.confirm(held.reference()))
-				.isInstanceOf(SeatUnavailableException.class)
-				.hasMessageContaining("expired");
+		assertThat(bookingService.confirmPaidBooking(held.reference(), clock.instant()).status())
+				.isEqualTo(BookingStatus.CONFIRMED);
+	}
+
+	/** Once the seats have genuinely gone back on sale, the money has to go back. */
+	@Test
+	void paymentArrivingAfterTheSeatsWereReleasedNeedsARefund() {
+		BookingView held = hold();
+		at(NOON.plus(Duration.ofMinutes(6)));
+		expiryJob.releaseLapsedHolds();
+
+		assertThatThrownBy(() -> bookingService.confirmPaidBooking(held.reference(), clock.instant()))
+				.isInstanceOf(PaymentArrivedTooLateException.class);
 	}
 
 	@Test
@@ -134,7 +149,7 @@ class HoldLifecycleTests extends IntegrationTest {
 		BookingView held = hold();
 		at(NOON.plus(Duration.ofMinutes(4).plusSeconds(59)));
 
-		assertThat(bookingService.confirm(held.reference()).status())
+		assertThat(bookingService.confirmPaidBooking(held.reference(), clock.instant()).status())
 				.isEqualTo(BookingStatus.CONFIRMED);
 	}
 
@@ -171,7 +186,7 @@ class HoldLifecycleTests extends IntegrationTest {
 	void theJobWillNotExpireAHoldThatWasConfirmedInTime() {
 		BookingView held = hold();
 		at(NOON.plus(Duration.ofMinutes(4)));
-		bookingService.confirm(held.reference());
+		bookingService.confirmPaidBooking(held.reference(), clock.instant());
 
 		at(NOON.plus(Duration.ofMinutes(6)));
 		int released = expiryJob.releaseLapsedHolds();

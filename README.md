@@ -96,18 +96,50 @@ Seeded accounts under the `seed` profile, both with password `seatly-demo-pass`:
 ## Booking a seat
 
 ```
-POST   /api/bookings                            hold seats for five minutes
-POST   /api/bookings/{reference}/confirmation   turn a live hold into a sale
-POST   /api/bookings/{reference}/cancellation   give the seats back early
-GET    /api/bookings/{reference}                look one up
 GET    /api/events                              what is on sale
 GET    /api/events/{id}/seats                   the seating chart
+POST   /api/bookings                            hold seats for five minutes
+POST   /api/bookings/{reference}/cancellation   give the seats back early
+GET    /api/bookings/{reference}                look one up
+GET    /api/bookings/mine                       your bookings
+POST   /api/payments/intents/{bookingReference} open a payment  (Idempotency-Key)
+POST   /api/payments/webhook                    the provider reports the outcome
 ```
 
-A hold is a PENDING booking with a deadline. Confirm before it lapses and the
-seats are sold; miss it and they go back on sale — immediately, because
-availability is decided from the deadline itself rather than from a background
-job having caught up. The job exists to make the stored state agree.
+A hold is a PENDING booking with a deadline. Pay before it lapses and the seats
+are sold; miss it and they go back on sale — immediately, because availability
+is decided from the deadline itself rather than from a background job having
+caught up. The job exists to make the stored state agree.
+
+There is no way to confirm a booking without paying for one. Confirmation
+happens in the webhook handler, which is why it takes no notice of who is signed
+in: a payment provider does not have an account here.
+
+## Paying, exactly once
+
+Three things stand between "the customer clicked once" and "the customer was
+charged once", and all three are needed because none of them covers the others:
+
+**`Idempotency-Key` on opening a payment.** A client whose request times out
+cannot tell whether it worked. Sending the same key again returns the first
+answer rather than opening a second payment. The key is scoped per account and
+fingerprinted against the request body, so reusing it for different content is
+refused (422) rather than answered with the wrong reply. Eight simultaneous
+callers using one key produce exactly one execution — measured in
+`IdempotencyConcurrencyTest`.
+
+**Webhook deduplication.** Providers deliver at least once. Every delivery is
+recorded by the provider's own event id behind a unique index; the second
+arrival is acknowledged and does nothing.
+
+**HMAC signatures.** The webhook endpoint is a public URL that turns unpaid
+bookings into paid ones. Deliveries are signed over the raw request body and
+compared in constant time; an unsigned or wrongly signed callback gets a 401.
+
+The confirmation email is written to an **outbox** in the same transaction that
+confirms the booking, and delivered afterwards by a separate job. Sending inside
+the transaction would email people about bookings that then rolled back; sending
+after it commits loses the message if the process dies in between.
 
 Failures come back as RFC 9457 problem documents, so `Seat A1 is no longer
 available` arrives as text a client can show rather than a status code it has to
@@ -115,9 +147,10 @@ interpret.
 
 ## Status
 
-Under construction. Seats can be browsed, held, confirmed and cancelled; holds
-expire on their own; and customers sign in with rotating refresh tokens. Payment
-and live seat updates are still to come.
+Under construction. Seats can be browsed, held, paid for and cancelled; holds
+expire on their own; customers sign in with rotating refresh tokens; and
+payments are idempotent end to end. Live seat updates and the load test are
+still to come.
 
 The concurrency work — what the unlocked version did under load, and what fixed
 it — is written up with its measurements in [docs/concurrency.md](docs/concurrency.md).

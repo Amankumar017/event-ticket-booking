@@ -7,6 +7,7 @@ import { BookingApi } from '../../core/booking-api';
 import { Countdown } from '../../core/countdown';
 import { MinorCurrencyPipe } from '../../core/minor-currency-pipe';
 import { Booking, SeatMap, SeatView } from '../../core/seatly-models';
+import { switchMap } from 'rxjs';
 
 /**
  * The seating chart for one event, and the hold placed on it.
@@ -40,6 +41,9 @@ export class SeatMapPage {
   /** The hold, once the server has granted one. */
   protected readonly booking = signal<Booking | null>(null);
   protected readonly working = signal(false);
+
+  /** Minted per payment attempt, kept so a retry reuses it rather than paying twice. */
+  private idempotencyKey: string | null = null;
   protected readonly problem = signal<string | null>(null);
 
   private readonly deadline = computed(() => this.booking()?.expiresAt ?? null);
@@ -121,20 +125,40 @@ export class SeatMapPage {
       });
   }
 
-  protected confirm(): void {
+  /**
+   * Pays for the hold.
+   *
+   * Three steps, because that is what paying actually involves: open a payment,
+   * settle it at the provider, then read back the booking the provider's webhook
+   * has confirmed. The middle step is the only one a real integration would
+   * replace, and it would be replaced by sending the customer to the provider.
+   *
+   * The idempotency key is minted once per attempt and reused on retry, so a
+   * request that times out cannot become two payments.
+   */
+  protected pay(): void {
     const reference = this.booking()?.reference;
     if (!reference) {
       return;
     }
 
+    this.idempotencyKey ??= crypto.randomUUID();
+
     this.begin();
-    this.bookingApi.confirm(reference).subscribe({
-      next: (confirmed) => {
-        this.booking.set(confirmed);
-        this.done();
-      },
-      error: (failure) => this.failed(failure),
-    });
+    this.bookingApi
+      .startPayment(reference, this.idempotencyKey)
+      .pipe(
+        switchMap((intent) => this.bookingApi.settlePayment(intent.paymentReference, 'succeeded')),
+        switchMap(() => this.bookingApi.byReference(reference)),
+      )
+      .subscribe({
+        next: (paid) => {
+          this.booking.set(paid);
+          this.idempotencyKey = null;
+          this.done();
+        },
+        error: (failure) => this.failed(failure),
+      });
   }
 
   protected cancel(): void {
@@ -156,6 +180,7 @@ export class SeatMapPage {
   /** Drops the hold from view and reloads the chart as the server now sees it. */
   protected startAgain(): void {
     this.booking.set(null);
+    this.idempotencyKey = null;
     this.problem.set(null);
     this.map.reload();
   }

@@ -84,7 +84,8 @@ public class SeatlyFixtures {
 	public void wipe() {
 		jdbc.execute("""
 				truncate table booking_seat, booking, event_seat, seat, seat_section, event, venue,
-				               refresh_token, app_user
+				               refresh_token, app_user, payment, idempotency_key, webhook_event,
+				               outbox_message
 				restart identity cascade
 				""");
 

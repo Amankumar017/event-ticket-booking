@@ -50,6 +50,11 @@ public class SecurityConfiguration {
 						.requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
 						.requestMatchers("/api/auth/register", "/api/auth/login",
 								"/api/auth/refresh", "/api/auth/logout").permitAll()
+						// The provider has no account here. It proves who it is with a
+						// signature over the body, which the handler checks itself.
+						.requestMatchers("/api/payments/webhook").permitAll()
+						// The simulated gateway only exists under the seed profile.
+						.requestMatchers("/api/dev/**").permitAll()
 						.requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
 						.requestMatchers("/actuator/**").hasRole(Role.ADMIN.name())
 						.anyRequest().authenticated())

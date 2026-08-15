@@ -31,18 +31,6 @@ public class BookingController {
 		return bookings.hold(request);
 	}
 
-	/**
-	 * Turns a live hold into a sale.
-	 * <p>
-	 * Idempotent: confirming an already confirmed booking returns it unchanged
-	 * rather than failing, because a customer who double-clicks, or a client that
-	 * retries a timed-out request, should not be punished for it.
-	 */
-	@PostMapping("/{reference}/confirmation")
-	public BookingView confirm(@PathVariable String reference) {
-		return bookings.confirm(reference);
-	}
-
 	/** Gives the seats back before the deadline. */
 	@PostMapping("/{reference}/cancellation")
 	public BookingView cancel(@PathVariable String reference) {

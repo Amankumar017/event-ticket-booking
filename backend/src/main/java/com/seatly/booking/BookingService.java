@@ -4,6 +4,8 @@ import com.seatly.account.AppUser;
 import com.seatly.account.AppUserRepository;
 import com.seatly.account.CurrentAccount;
 import com.seatly.common.NotFoundException;
+import com.seatly.common.outbox.OutboxMessage;
+import com.seatly.common.outbox.OutboxMessageRepository;
 import com.seatly.event.Event;
 import com.seatly.event.EventRepository;
 import com.seatly.event.EventSeat;
@@ -17,6 +19,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Holds seats, and turns holds into sales.
@@ -47,6 +50,7 @@ public class BookingService {
 	private final EventSeatRepository eventSeats;
 	private final BookingRepository bookings;
 	private final BookingSeatRepository bookingSeats;
+	private final OutboxMessageRepository outbox;
 	private final BookingReferences references;
 	private final AppUserRepository users;
 	private final CurrentAccount currentAccount;
@@ -55,13 +59,14 @@ public class BookingService {
 	private final Clock clock;
 
 	public BookingService(EventRepository events, EventSeatRepository eventSeats,
-			BookingRepository bookings, BookingSeatRepository bookingSeats,
+			BookingRepository bookings, BookingSeatRepository bookingSeats, OutboxMessageRepository outbox,
 			BookingReferences references, AppUserRepository users, CurrentAccount currentAccount,
 			SeatHoldGuard holdGuard, HoldProperties holdProperties, Clock clock) {
 		this.events = events;
 		this.eventSeats = eventSeats;
 		this.bookings = bookings;
 		this.bookingSeats = bookingSeats;
+		this.outbox = outbox;
 		this.references = references;
 		this.users = users;
 		this.currentAccount = currentAccount;
@@ -74,8 +79,8 @@ public class BookingService {
 	 * Holds seats for this customer until the deadline, and no longer.
 	 * <p>
 	 * The result is a PENDING booking. Nothing has been paid for and nothing is
-	 * sold: if {@link #confirm} does not arrive before {@code expiresAt}, the
-	 * expiry job gives the chairs back.
+	 * sold: if payment does not arrive before {@code expiresAt}, the expiry job
+	 * gives the chairs back.
 	 */
 	@Transactional
 	public BookingView hold(BookingRequest request) {
@@ -130,32 +135,39 @@ public class BookingService {
 	}
 
 	/**
-	 * Turns a live hold into a sale.
+	 * Confirms a booking because it has been paid for.
 	 * <p>
-	 * Payment arrives in stage 8; for now confirming is the customer saying yes.
-	 * A hold that has already lapsed is refused rather than quietly revived --
-	 * by then the chairs may belong to somebody else.
+	 * There is no customer-facing way to confirm a booking any more: money is the
+	 * only thing that turns a hold into a sale, and this is called by the webhook
+	 * that reports it. Since there is no signed-in account behind a webhook there
+	 * is no ownership check here, which is why this is a separate method rather
+	 * than a flag on one -- a boolean that switches off an authorisation check is
+	 * the kind of thing that ends up being passed from somewhere it should not
+	 * be.
+	 * <p>
+	 * A lapsed deadline is not by itself a reason to refuse. If the seats were
+	 * still this booking's when the money arrived, nobody was waiting for them
+	 * and the customer should have their tickets. If somebody else had taken
+	 * them, that act retired this booking's claim and expired it, which is the
+	 * case caught below.
 	 */
 	@Transactional
-	public BookingView confirm(String reference) {
-		Instant now = clock.instant();
+	public BookingView confirmPaidBooking(String reference, Instant paidAt) {
 		Booking booking = lockSeatsThenLoad(reference);
-		mustBelongToCaller(booking);
 
 		if (booking.getStatus() == BookingStatus.CONFIRMED) {
 			return BookingView.of(booking);
 		}
 		if (booking.getStatus() != BookingStatus.PENDING) {
-			throw new SeatUnavailableException(
-					"This booking is " + booking.getStatus().name().toLowerCase());
-		}
-		if (booking.hasLapsedBy(now)) {
-			throw new SeatUnavailableException("This hold has expired");
+			// Money arrived for a booking that has expired or been cancelled. The
+			// seats are gone; this needs a refund, not a confirmation.
+			throw new PaymentArrivedTooLateException(reference, booking.getStatus());
 		}
 
-		booking.confirm(now);
+		booking.confirm(paidAt);
 		booking.getLines().forEach(line -> line.getEventSeat().markSold());
 		holdGuard.releaseAll(seatIdsOf(booking));
+		announceConfirmation(booking);
 
 		return BookingView.of(booking);
 	}
@@ -206,6 +218,24 @@ public class BookingService {
 		return bookings.findByEventIdOrderByIdAsc(eventId).stream()
 				.map(BookingView::of)
 				.toList();
+	}
+
+	/**
+	 * Writes the confirmation email into the outbox, inside this transaction.
+	 * <p>
+	 * Not sent here. If this transaction rolls back the message goes with it, and
+	 * a customer is never told about a booking that does not exist.
+	 */
+	private void announceConfirmation(Booking booking) {
+		String seats = booking.getLines().stream()
+				.map(line -> line.getEventSeat().getSeat().label())
+				.collect(Collectors.joining(", "));
+
+		outbox.save(new OutboxMessage(
+				"booking.confirmed",
+				booking.getCustomerEmail(),
+				"Booking %s confirmed for %s: %s".formatted(
+						booking.getReference(), booking.getEvent().getTitle(), seats)));
 	}
 
 	private AppUser buyer() {

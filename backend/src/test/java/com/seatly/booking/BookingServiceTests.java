@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -125,7 +126,7 @@ class BookingServiceTests extends IntegrationTest {
 		List<EventSeat> seats = fixtures.seatsOf(event);
 		BookingView held = bookingService.hold(request(event, seats.get(0)));
 
-		BookingView confirmed = bookingService.confirm(held.reference());
+		BookingView confirmed = bookingService.confirmPaidBooking(held.reference(), Instant.now());
 
 		assertThat(confirmed.status()).isEqualTo(BookingStatus.CONFIRMED);
 		assertThat(confirmed.confirmedAt()).isNotNull();
@@ -134,15 +135,15 @@ class BookingServiceTests extends IntegrationTest {
 				.isEqualTo(EventSeatStatus.SOLD);
 	}
 
-	/** A double-clicked confirm button must not be an error. */
+	/** A webhook delivered twice must not be an error. */
 	@Test
 	void confirmingTwiceIsTheSameAsConfirmingOnce() {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 		BookingView held = bookingService.hold(request(event, seats.get(0)));
 
-		BookingView first = bookingService.confirm(held.reference());
-		BookingView second = bookingService.confirm(held.reference());
+		BookingView first = bookingService.confirmPaidBooking(held.reference(), Instant.now());
+		BookingView second = bookingService.confirmPaidBooking(held.reference(), Instant.now());
 
 		assertThat(second.status()).isEqualTo(BookingStatus.CONFIRMED);
 		assertThat(second.confirmedAt()).isEqualTo(first.confirmedAt());
@@ -194,7 +195,7 @@ class BookingServiceTests extends IntegrationTest {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 		BookingView held = bookingService.hold(request(event, seats.get(0)));
-		bookingService.confirm(held.reference());
+		bookingService.confirmPaidBooking(held.reference(), Instant.now());
 
 		assertThatThrownBy(() -> bookingService.cancel(held.reference()))
 				.isInstanceOf(SeatUnavailableException.class);

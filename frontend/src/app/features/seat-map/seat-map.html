@@ -87,9 +87,9 @@
                   type="button"
                   class="summary__action summary__action--primary"
                   [disabled]="working()"
-                  (click)="confirm()"
+                  (click)="pay()"
                 >
-                  Confirm
+                  Pay {{ held.totalMinor | minorCurrency: held.currency }}
                 </button>
               </span>
             }

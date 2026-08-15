@@ -57,6 +57,18 @@ export interface Booking {
   readonly seats: readonly BookedSeat[];
 }
 
+export type PaymentStatus = 'REQUIRES_PAYMENT' | 'SUCCEEDED' | 'FAILED';
+
+export interface PaymentIntent {
+  readonly paymentReference: string;
+  readonly bookingReference: string;
+  readonly amountMinor: number;
+  readonly currency: string;
+  readonly status: PaymentStatus;
+  readonly failureReason: string | null;
+  readonly settledAt: string | null;
+}
+
 /** Identity comes from the access token, so it is not in here. */
 export interface HoldRequest {
   readonly eventId: number;

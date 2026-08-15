@@ -79,21 +79,6 @@ class BookingApiIntegrationTests extends IntegrationTest {
 	}
 
 	@Test
-	void confirmsAHoldAndSellsTheSeats() throws Exception {
-		Event event = fixtures.onSaleEvent();
-		List<EventSeat> seats = fixtures.seatsOf(event);
-		String reference = holdReference(event, seats.get(0));
-
-		mockMvc.perform(post("/api/bookings/{reference}/confirmation", reference).with(as(customer)))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("CONFIRMED"))
-				.andExpect(jsonPath("$.confirmedAt").isNotEmpty());
-
-		mockMvc.perform(get("/api/events/{id}/seats", event.getId()))
-				.andExpect(jsonPath("$.sections[0].rows[0].seats[0].status").value("SOLD"));
-	}
-
-	@Test
 	void cancellingAHoldPutsTheSeatBackOnSale() throws Exception {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
@@ -181,12 +166,12 @@ class BookingApiIntegrationTests extends IntegrationTest {
 	}
 
 	@Test
-	void cannotConfirmSomebodyElsesHold() throws Exception {
+	void cannotCancelSomebodyElsesHold() throws Exception {
 		Event event = fixtures.onSaleEvent();
 		List<EventSeat> seats = fixtures.seatsOf(event);
 		String reference = holdReference(event, seats.get(0));
 
-		mockMvc.perform(post("/api/bookings/{reference}/confirmation", reference)
+		mockMvc.perform(post("/api/bookings/{reference}/cancellation", reference)
 						.with(as(accounts.customer())))
 				.andExpect(status().isNotFound());
 	}
