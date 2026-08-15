@@ -1,8 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Auth } from '../../core/auth';
+import { SeatStream } from '../../core/seat-stream';
 import { SeatMapPage } from './seat-map';
 import { Booking, SeatMap } from '../../core/seatly-models';
 
@@ -44,13 +46,26 @@ function heldBooking(overrides: Partial<Booking> = {}): Booking {
   };
 }
 
+/** The seat map opens a live stream; these tests are not about that. */
+const seatStreamStub = {
+  latest: () => signal(new Map()),
+  statusOf: () => signal(undefined),
+  watch: () => {},
+  stop: () => {},
+};
+
 describe('SeatMapPage holding seats', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SeatMapPage],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: SeatStream, useValue: seatStreamStub },
+      ],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
@@ -233,7 +248,12 @@ describe('SeatMapPage when nobody is signed in', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SeatMapPage],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: SeatStream, useValue: seatStreamStub },
+      ],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);

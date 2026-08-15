@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { SeatStream } from '../../core/seat-stream';
 import { SeatMapPage } from './seat-map';
 import { SeatMap } from '../../core/seatly-models';
 
@@ -42,13 +44,26 @@ const SEAT_MAP: SeatMap = {
   ],
 };
 
+/** The seat map opens a live stream; these tests are not about that. */
+const seatStreamStub = {
+  latest: () => signal(new Map()),
+  statusOf: () => signal(undefined),
+  watch: () => {},
+  stop: () => {},
+};
+
 describe('SeatMapPage', () => {
   let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SeatMapPage],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: SeatStream, useValue: seatStreamStub },
+      ],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);

@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
@@ -6,6 +15,7 @@ import { Auth } from '../../core/auth';
 import { BookingApi } from '../../core/booking-api';
 import { Countdown } from '../../core/countdown';
 import { MinorCurrencyPipe } from '../../core/minor-currency-pipe';
+import { SeatStream } from '../../core/seat-stream';
 import { Booking, SeatMap, SeatView } from '../../core/seatly-models';
 import { switchMap } from 'rxjs';
 
@@ -28,12 +38,52 @@ export class SeatMapPage {
   private readonly auth = inject(Auth);
   private readonly router = inject(Router);
   private readonly countdown = inject(Countdown);
+  private readonly stream = inject(SeatStream);
 
   readonly eventId = input.required<string>();
 
   protected readonly map = httpResource<SeatMap>(
     () => `/api/events/${this.eventId()}/seats`,
   );
+
+  private readonly liveStatuses = this.stream.latest();
+
+  /**
+   * The chart as fetched, with anything the stream has since reported laid over
+   * the top.
+   *
+   * Computed rather than written back into the resource: the fetched chart stays
+   * the fetched chart, so a reload replaces it cleanly and there is no merged
+   * state to get out of step.
+   */
+  protected readonly liveMap = computed<SeatMap | undefined>(() => {
+    const fetched = this.map.value();
+    const live = this.liveStatuses();
+    if (!fetched || live.size === 0) {
+      return fetched;
+    }
+
+    return {
+      ...fetched,
+      sections: fetched.sections.map((section) => ({
+        ...section,
+        rows: section.rows.map((row) => ({
+          ...row,
+          seats: row.seats.map((seat) => {
+            const change = live.get(seat.eventSeatId);
+            return change ? { ...seat, status: change.status } : seat;
+          }),
+        })),
+      })),
+    };
+  });
+
+  constructor() {
+    // The route parameter is a signal, so this follows the customer from one
+    // event to another without anybody having to remember to resubscribe.
+    effect(() => this.stream.watch(this.eventId()));
+    inject(DestroyRef).onDestroy(() => this.stream.stop());
+  }
 
   /** Ids of the seats this customer has picked, not yet sent anywhere. */
   private readonly selectedIds = signal<ReadonlySet<number>>(new Set());
@@ -65,7 +115,7 @@ export class SeatMapPage {
   protected readonly selectedTotalMinor = computed(() => {
     const chosen = this.selectedIds();
     let total = 0;
-    for (const section of this.map.value()?.sections ?? []) {
+    for (const section of this.liveMap()?.sections ?? []) {
       for (const row of section.rows) {
         for (const seat of row.seats) {
           if (chosen.has(seat.eventSeatId)) {

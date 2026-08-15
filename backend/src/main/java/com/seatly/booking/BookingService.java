@@ -11,6 +11,7 @@ import com.seatly.event.EventRepository;
 import com.seatly.event.EventSeat;
 import com.seatly.event.EventSeatRepository;
 import com.seatly.event.EventSeatStatus;
+import com.seatly.event.stream.SeatChanges;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -54,6 +55,7 @@ public class BookingService {
 	private final BookingReferences references;
 	private final AppUserRepository users;
 	private final CurrentAccount currentAccount;
+	private final SeatChanges seatChanges;
 	private final SeatHoldGuard holdGuard;
 	private final HoldProperties holdProperties;
 	private final Clock clock;
@@ -61,7 +63,7 @@ public class BookingService {
 	public BookingService(EventRepository events, EventSeatRepository eventSeats,
 			BookingRepository bookings, BookingSeatRepository bookingSeats, OutboxMessageRepository outbox,
 			BookingReferences references, AppUserRepository users, CurrentAccount currentAccount,
-			SeatHoldGuard holdGuard, HoldProperties holdProperties, Clock clock) {
+			SeatChanges seatChanges, SeatHoldGuard holdGuard, HoldProperties holdProperties, Clock clock) {
 		this.events = events;
 		this.eventSeats = eventSeats;
 		this.bookings = bookings;
@@ -70,6 +72,7 @@ public class BookingService {
 		this.references = references;
 		this.users = users;
 		this.currentAccount = currentAccount;
+		this.seatChanges = seatChanges;
 		this.holdGuard = holdGuard;
 		this.holdProperties = holdProperties;
 		this.clock = clock;
@@ -130,6 +133,7 @@ public class BookingService {
 		seats.forEach(booking::addSeat);
 		bookings.save(booking);
 		seats.forEach(seat -> seat.holdUntil(deadline));
+		seatChanges.announce(seats);
 
 		return BookingView.of(booking);
 	}
@@ -167,6 +171,7 @@ public class BookingService {
 		booking.confirm(paidAt);
 		booking.getLines().forEach(line -> line.getEventSeat().markSold());
 		holdGuard.releaseAll(seatIdsOf(booking));
+		seatChanges.announce(seatsOf(booking));
 		announceConfirmation(booking);
 
 		return BookingView.of(booking);
@@ -185,6 +190,7 @@ public class BookingService {
 			releaseSeatsOf(booking);
 			booking.cancel();
 			holdGuard.releaseAll(seatIdsOf(booking));
+			seatChanges.announce(seatsOf(booking));
 		}
 
 		return BookingView.of(booking);
@@ -320,6 +326,10 @@ public class BookingService {
 			}
 			line.releaseClaim();
 		});
+	}
+
+	private List<EventSeat> seatsOf(Booking booking) {
+		return booking.getLines().stream().map(BookingSeat::getEventSeat).toList();
 	}
 
 	private List<Long> seatIdsOf(Booking booking) {

@@ -104,6 +104,7 @@ GET    /api/bookings/{reference}                look one up
 GET    /api/bookings/mine                       your bookings
 POST   /api/payments/intents/{bookingReference} open a payment  (Idempotency-Key)
 POST   /api/payments/webhook                    the provider reports the outcome
+GET    /api/events/{id}/seats/stream             live seat changes (SSE)
 ```
 
 A hold is a PENDING booking with a deadline. Pay before it lapses and the seats
@@ -141,6 +142,24 @@ confirms the booking, and delivered afterwards by a separate job. Sending inside
 the transaction would email people about bookings that then rolled back; sending
 after it commits loses the message if the process dies in between.
 
+## Live seat updates
+
+Open two browsers on the same chart and one sees the other take a seat, without
+polling and without a reload.
+
+Changes are announced while the booking still holds its seat locks, but nothing
+leaves the building until the transaction commits — the listener is
+`AFTER_COMMIT`, because there is no unsending an SSE message and a rolled-back
+booking must never be shown as a taken seat. A test proves exactly that: a hold
+that fails on its second seat broadcasts nothing about its first.
+
+Server-sent events rather than WebSockets, because the traffic goes one way and
+browsers already know how to reconnect an `EventSource`. Redis pub/sub sits in
+the middle so that a seat sold on one instance reaches the browsers connected to
+every other one — a live connection belongs to one JVM and cannot be shared.
+Idle streams get a comment line every twenty seconds, since anything between the
+browser and the server treats a silent socket as a dead one.
+
 Failures come back as RFC 9457 problem documents, so `Seat A1 is no longer
 available` arrives as text a client can show rather than a status code it has to
 interpret.
@@ -149,8 +168,8 @@ interpret.
 
 Under construction. Seats can be browsed, held, paid for and cancelled; holds
 expire on their own; customers sign in with rotating refresh tokens; and
-payments are idempotent end to end. Live seat updates and the load test are
-still to come.
+payments are idempotent end to end; and seat changes stream live to every open
+browser. The load test and the observability stack are still to come.
 
 The concurrency work — what the unlocked version did under load, and what fixed
 it — is written up with its measurements in [docs/concurrency.md](docs/concurrency.md).

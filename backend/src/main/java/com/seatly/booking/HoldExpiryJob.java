@@ -3,6 +3,7 @@ package com.seatly.booking;
 import com.seatly.event.EventSeat;
 import com.seatly.event.EventSeatRepository;
 import com.seatly.event.EventSeatStatus;
+import com.seatly.event.stream.SeatChanges;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
@@ -39,16 +40,18 @@ public class HoldExpiryJob {
 	private final BookingRepository bookings;
 	private final EventSeatRepository eventSeats;
 	private final SeatHoldGuard holdGuard;
+	private final SeatChanges seatChanges;
 	private final HoldProperties holdProperties;
 	private final Clock clock;
 	private final HoldExpiryJob self;
 
 	public HoldExpiryJob(BookingRepository bookings, EventSeatRepository eventSeats,
-			SeatHoldGuard holdGuard, HoldProperties holdProperties, Clock clock,
+			SeatHoldGuard holdGuard, SeatChanges seatChanges, HoldProperties holdProperties, Clock clock,
 			@Lazy HoldExpiryJob self) {
 		this.bookings = bookings;
 		this.eventSeats = eventSeats;
 		this.holdGuard = holdGuard;
+		this.seatChanges = seatChanges;
 		this.holdProperties = holdProperties;
 		this.clock = clock;
 		this.self = self;
@@ -112,10 +115,12 @@ public class HoldExpiryJob {
 
 		booking.expire();
 		booking.getLines().forEach(BookingSeat::releaseClaim);
-		seats.stream()
+		List<EventSeat> released = seats.stream()
 				.filter(seat -> seat.getStatus() == EventSeatStatus.HELD)
-				.forEach(EventSeat::release);
+				.toList();
+		released.forEach(EventSeat::release);
 		holdGuard.releaseAll(seatIds);
+		seatChanges.announce(released);
 
 		return true;
 	}

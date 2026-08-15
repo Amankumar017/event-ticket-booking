@@ -5,7 +5,7 @@
 } @else if (map.error()) {
   <p class="state state--error">That event could not be loaded.</p>
 } @else {
-  @if (map.value(); as seatMap) {
+  @if (liveMap(); as seatMap) {
     <header class="event-header">
       <h1>{{ seatMap.title }}</h1>
       <p class="event-header__meta">
