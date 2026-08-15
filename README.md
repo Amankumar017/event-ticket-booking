@@ -66,6 +66,47 @@ cd backend
 ./mvnw test
 ```
 
+## If it does not start
+
+**"Could not find a valid Docker environment"** during tests or startup. Docker
+Desktop is installed but not running. The tests bring up their own PostgreSQL and
+Redis through Testcontainers, so the daemon has to be up even when the compose
+stack is not.
+
+**"Port 8090 was already in use"**, or the same for 4200, 5433 or 6380. Usually a
+server left running from earlier. Find and stop it:
+
+```bash
+lsof -i :8090          # macOS, Linux
+netstat -ano | findstr :8090    # Windows, then taskkill /PID <pid> /F
+```
+
+**`./mvnw: Permission denied`** on macOS or Linux, if the executable bit is lost
+in transit: `chmod +x backend/mvnw`.
+
+**`npm start` fails on the Node version.** Angular 20 needs Node 20.19 or newer.
+Check with `node -v`.
+
+**The site says "Can't reach the box office".** The frontend is up and the
+backend is not. The dev server proxies `/api` to port 8090, so both have to be
+running.
+
+**Sign-in is rejected.** The demo accounts only exist under the `seed` profile.
+Look for this line in the backend output:
+
+```
+Seeded 2 account(s): customer@example.com / organiser@example.com
+```
+
+**"Migration checksum mismatch"** means a migration file changed after it had
+already run against that database. Migrations are immutable once applied. For a
+local database with nothing worth keeping:
+
+```bash
+docker exec seatly-postgres psql -U seatly -d seatly \
+  -c "drop schema public cascade; create schema public;"
+```
+
 ## Ports
 
 Non-default host ports are used throughout so the stack can run alongside other
