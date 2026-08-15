@@ -1,5 +1,8 @@
 package com.seatly.booking;
 
+import com.seatly.account.AppUser;
+import com.seatly.account.AppUserRepository;
+import com.seatly.account.CurrentAccount;
 import com.seatly.common.NotFoundException;
 import com.seatly.event.Event;
 import com.seatly.event.EventRepository;
@@ -45,19 +48,23 @@ public class BookingService {
 	private final BookingRepository bookings;
 	private final BookingSeatRepository bookingSeats;
 	private final BookingReferences references;
+	private final AppUserRepository users;
+	private final CurrentAccount currentAccount;
 	private final SeatHoldGuard holdGuard;
 	private final HoldProperties holdProperties;
 	private final Clock clock;
 
 	public BookingService(EventRepository events, EventSeatRepository eventSeats,
 			BookingRepository bookings, BookingSeatRepository bookingSeats,
-			BookingReferences references, SeatHoldGuard holdGuard,
-			HoldProperties holdProperties, Clock clock) {
+			BookingReferences references, AppUserRepository users, CurrentAccount currentAccount,
+			SeatHoldGuard holdGuard, HoldProperties holdProperties, Clock clock) {
 		this.events = events;
 		this.eventSeats = eventSeats;
 		this.bookings = bookings;
 		this.bookingSeats = bookingSeats;
 		this.references = references;
+		this.users = users;
+		this.currentAccount = currentAccount;
 		this.holdGuard = holdGuard;
 		this.holdProperties = holdProperties;
 		this.clock = clock;
@@ -114,8 +121,7 @@ public class BookingService {
 
 		// ---- and the write, under the lock taken above ----
 		Instant deadline = now.plus(holdProperties.ttl());
-		Booking booking = new Booking(
-				references.next(), event, request.customerName(), request.customerEmail(), deadline);
+		Booking booking = new Booking(references.next(), event, buyer(), deadline);
 		seats.forEach(booking::addSeat);
 		bookings.save(booking);
 		seats.forEach(seat -> seat.holdUntil(deadline));
@@ -134,6 +140,7 @@ public class BookingService {
 	public BookingView confirm(String reference) {
 		Instant now = clock.instant();
 		Booking booking = lockSeatsThenLoad(reference);
+		mustBelongToCaller(booking);
 
 		if (booking.getStatus() == BookingStatus.CONFIRMED) {
 			return BookingView.of(booking);
@@ -157,6 +164,7 @@ public class BookingService {
 	@Transactional
 	public BookingView cancel(String reference) {
 		Booking booking = lockSeatsThenLoad(reference);
+		mustBelongToCaller(booking);
 
 		if (booking.getStatus() == BookingStatus.CONFIRMED) {
 			throw new SeatUnavailableException("A confirmed booking cannot be cancelled here");
@@ -172,9 +180,51 @@ public class BookingService {
 
 	@Transactional(readOnly = true)
 	public BookingView byReference(String reference) {
-		return bookings.findByReference(reference)
-				.map(BookingView::of)
+		Booking booking = bookings.findByReference(reference)
 				.orElseThrow(() -> NotFoundException.of("Booking", reference));
+		mustBelongToCaller(booking);
+		return BookingView.of(booking);
+	}
+
+	/** Everything the signed-in customer has booked, newest first. */
+	@Transactional(readOnly = true)
+	public List<BookingView> mine() {
+		return bookings.findByUserIdOrderByIdDesc(currentAccount.id()).stream()
+				.map(BookingView::of)
+				.toList();
+	}
+
+	/**
+	 * Every booking for an event, for the people who run it.
+	 * <p>
+	 * No ownership check here, deliberately -- an organiser is meant to see other
+	 * people's bookings. The role check on the endpoint is what stands between
+	 * this and a customer reading the whole guest list.
+	 */
+	@Transactional(readOnly = true)
+	public List<BookingView> forEvent(Long eventId) {
+		return bookings.findByEventIdOrderByIdAsc(eventId).stream()
+				.map(BookingView::of)
+				.toList();
+	}
+
+	private AppUser buyer() {
+		Long id = currentAccount.id();
+		return users.findById(id).orElseThrow(() -> NotFoundException.of("Account", id));
+	}
+
+	/**
+	 * Refuses a booking that belongs to somebody else.
+	 * <p>
+	 * Reported as "not found" rather than "forbidden" on purpose. A 403 confirms
+	 * that the reference exists, which turns this endpoint into a way of testing
+	 * guesses; a 404 tells someone who is not the owner exactly as much as a
+	 * reference that was never issued.
+	 */
+	private void mustBelongToCaller(Booking booking) {
+		if (!booking.belongsTo(currentAccount.id())) {
+			throw NotFoundException.of("Booking", booking.getReference());
+		}
 	}
 
 	/**

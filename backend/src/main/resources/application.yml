@@ -41,6 +41,18 @@ spring:
       enabled: true
 
 seatly:
+  security:
+    # Overridden in every real deployment. A default that only works locally is
+    # better than one that silently works in production.
+    jwt-secret: ${JWT_SECRET:local-development-signing-key-change-me}
+    # Short, because nothing can revoke a signed token before it expires.
+    access-token-ttl: 15m
+    # Long, because it is revocable, rotated on every use, and never leaves an
+    # http-only cookie.
+    refresh-token-ttl: 14d
+    # Off locally so the cookie works over plain http; on everywhere else.
+    cookie-secure: ${COOKIE_SECURE:false}
+
   hold:
     # How long a customer gets to pay. Long enough to find a card, short enough
     # that a hall is not held hostage by people who wandered off.

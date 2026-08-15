@@ -1,0 +1,65 @@
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: 1.6rem;
+}
+
+.bookings {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.booking {
+  padding: 1rem 1.25rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}
+
+.booking__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.booking__reference {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+
+.booking__status {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.booking__status--confirmed {
+  color: var(--accent);
+}
+
+.booking__status--pending {
+  color: var(--held);
+}
+
+.booking__seats,
+.booking__when {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.state {
+  color: var(--muted);
+}
+
+.state--error {
+  color: var(--error);
+}
+
+a {
+  color: var(--accent);
+}

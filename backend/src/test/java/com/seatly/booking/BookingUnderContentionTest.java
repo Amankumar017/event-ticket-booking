@@ -4,6 +4,8 @@ import com.seatly.event.Event;
 import com.seatly.event.EventSeat;
 import com.seatly.support.IntegrationTest;
 import com.seatly.support.SeatlyFixtures;
+import com.seatly.support.TestAccounts;
+import com.seatly.account.AppUser;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,6 +74,9 @@ class BookingUnderContentionTest extends IntegrationTest {
 	private SeatlyFixtures fixtures;
 
 	@Autowired
+	private TestAccounts accounts;
+
+	@Autowired
 	private JdbcTemplate jdbc;
 
 	@Autowired
@@ -83,6 +88,7 @@ class BookingUnderContentionTest extends IntegrationTest {
 	private Long eventId;
 	private Long contestedSeatId;
 	private List<Long> allSeatIds;
+	private AppUser buyer;
 
 	@BeforeEach
 	void setUp() {
@@ -95,10 +101,13 @@ class BookingUnderContentionTest extends IntegrationTest {
 		eventId = event.getId();
 		contestedSeatId = seats.get(0).getId();
 		allSeatIds = seats.stream().map(EventSeat::getId).toList();
+		buyer = accounts.customer();
+		accounts.actAs(buyer);
 	}
 
 	@AfterEach
 	void tearDown() {
+		accounts.signOut();
 		fixtures.wipe();
 	}
 
@@ -113,9 +122,7 @@ class BookingUnderContentionTest extends IntegrationTest {
 
 		runTogether(number -> {
 			try {
-				bookingService.hold(new BookingRequest(
-						eventId, List.of(contestedSeatId),
-						"Customer " + number, "customer" + number + "@example.com"));
+				bookingService.hold(new BookingRequest(eventId, List.of(contestedSeatId)));
 				sold.incrementAndGet();
 			}
 			catch (SeatUnavailableException politeRefusal) {
@@ -268,9 +275,8 @@ class BookingUnderContentionTest extends IntegrationTest {
 				pool.submit(() -> {
 					try {
 						startTogether.await(10, TimeUnit.SECONDS);
-						bookingService.hold(new BookingRequest(
-								eventId, order, "Customer " + contender,
-								"customer" + contender + "@example.com"));
+						accounts.actAs(buyer);
+						bookingService.hold(new BookingRequest(eventId, order));
 						sold.incrementAndGet();
 					}
 					catch (SeatUnavailableException politeRefusal) {
@@ -334,6 +340,9 @@ class BookingUnderContentionTest extends IntegrationTest {
 					catch (Exception barrierFailed) {
 						throw new IllegalStateException(barrierFailed);
 					}
+					// The security context is thread-bound, so each contender has
+					// to establish its own before calling the service.
+					accounts.actAs(buyer);
 					contender.attempt(contenderNumber);
 				});
 			}

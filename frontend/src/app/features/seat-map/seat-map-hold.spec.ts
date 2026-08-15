@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { Auth } from '../../core/auth';
 import { SeatMapPage } from './seat-map';
 import { Booking, SeatMap } from '../../core/seatly-models';
 
@@ -53,6 +54,15 @@ describe('SeatMapPage holding seats', () => {
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
+
+    // Holding seats now requires an account. The anonymous case is covered by
+    // the describe block at the bottom of this file.
+    TestBed.inject(Auth).login('aman@example.com', 'correct-horse-battery').subscribe();
+    httpMock.expectOne('/api/auth/login').flush({
+      accessToken: 'test-token',
+      expiresInSeconds: 900,
+      user: { id: 1, email: 'aman@example.com', displayName: 'Aman', role: 'CUSTOMER' },
+    });
   });
 
   afterEach(() => httpMock.verify({ ignoreCancelled: true }));
@@ -167,5 +177,48 @@ describe('SeatMapPage holding seats', () => {
     expect(html(fixture).querySelector('.state--error')?.textContent).toContain(
       'Seat A1 is no longer available',
     );
+  });
+});
+
+describe('SeatMapPage when nobody is signed in', () => {
+  let httpMock: HttpTestingController;
+  let router: Router;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [SeatMapPage],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    }).compileComponents();
+
+    httpMock = TestBed.inject(HttpTestingController);
+    router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+  });
+
+  afterEach(() => httpMock.verify({ ignoreCancelled: true }));
+
+  /**
+   * The redirect is a courtesy, not a control. The server refuses an
+   * unauthenticated hold whatever the browser does.
+   */
+  it('sends the visitor to sign in rather than attempting a hold', async () => {
+    const fixture = TestBed.createComponent(SeatMapPage);
+    fixture.componentRef.setInput('eventId', '7');
+    fixture.detectChanges();
+    TestBed.tick();
+    httpMock.expectOne('/api/events/7/seats').flush(SEAT_MAP);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement as HTMLElement;
+    html.querySelector<HTMLButtonElement>('button.seat')!.click();
+    fixture.detectChanges();
+    html.querySelector<HTMLButtonElement>('.summary__action--primary')!.click();
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/sign-in'], {
+      queryParams: { returnTo: '/events/7' },
+    });
+    httpMock.expectNone('/api/bookings');
   });
 });

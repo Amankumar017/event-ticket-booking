@@ -1,5 +1,6 @@
 package com.seatly.booking;
 
+import com.seatly.account.AppUser;
 import com.seatly.common.BaseEntity;
 import com.seatly.event.Event;
 import com.seatly.event.EventSeat;
@@ -38,6 +39,17 @@ public class Booking extends BaseEntity {
 	@JoinColumn(name = "event_id", nullable = false)
 	private Event event;
 
+	/**
+	 * The account that made this booking.
+	 * <p>
+	 * Nullable because bookings predate accounts: the rows written before stage 7
+	 * keep the name and address they were created with and have no owner. New
+	 * bookings always have one.
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private AppUser user;
+
 	@Column(name = "customer_name", nullable = false, length = 120)
 	private String customerName;
 
@@ -67,12 +79,20 @@ public class Booking extends BaseEntity {
 	protected Booking() {
 	}
 
-	public Booking(String reference, Event event, String customerName, String customerEmail, Instant expiresAt) {
+	public Booking(String reference, Event event, AppUser user, Instant expiresAt) {
 		this.reference = reference;
 		this.event = event;
-		this.customerName = customerName;
-		this.customerEmail = customerEmail;
+		this.user = user;
+		// Copied rather than read through to the account, so a booking still says
+		// who bought it after somebody changes their name or closes the account.
+		this.customerName = user.getDisplayName();
+		this.customerEmail = user.getEmail();
 		this.expiresAt = expiresAt;
+	}
+
+	/** Whether this booking belongs to the given account. */
+	public boolean belongsTo(Long userId) {
+		return user != null && user.getId().equals(userId);
 	}
 
 	/**
@@ -107,6 +127,10 @@ public class Booking extends BaseEntity {
 
 	public String getReference() {
 		return reference;
+	}
+
+	public AppUser getUser() {
+		return user;
 	}
 
 	public Event getEvent() {

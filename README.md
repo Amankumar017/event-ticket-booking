@@ -67,6 +67,32 @@ local services.
 | PostgreSQL  | 5433      |
 | Redis       | 6380      |
 
+## Accounts
+
+```
+POST   /api/auth/register                       create an account and sign in
+POST   /api/auth/login                          sign in
+POST   /api/auth/refresh                        renew, using the refresh cookie
+POST   /api/auth/logout                         end this session
+GET    /api/auth/me                             who am I
+```
+
+The access token is short-lived, signed, and returned in the response body for
+the client to hold in memory. The refresh token never appears in a body at all:
+it lives in an http-only, `SameSite=Strict` cookie scoped to `/api/auth`, so no
+script on the page can read it and no other site can cause it to be sent.
+
+Refresh tokens are **rotated** — each one may be spent exactly once, and using it
+issues a successor. A token that has already been spent turning up again means
+two parties hold it, so the whole session family is revoked and both are made to
+sign in. Stored as SHA-256 hashes, never in the clear.
+
+Browsing is open to anyone. Buying requires an account, and identity comes from
+the verified token rather than from anything in the request body.
+
+Seeded accounts under the `seed` profile, both with password `seatly-demo-pass`:
+`customer@example.com` and `organiser@example.com`.
+
 ## Booking a seat
 
 ```
@@ -89,9 +115,9 @@ interpret.
 
 ## Status
 
-Under construction. Seats can be browsed, held, confirmed and cancelled, and
-holds expire on their own. Payment, authentication and live seat updates are
-still to come.
+Under construction. Seats can be browsed, held, confirmed and cancelled; holds
+expire on their own; and customers sign in with rotating refresh tokens. Payment
+and live seat updates are still to come.
 
 The concurrency work — what the unlocked version did under load, and what fixed
 it — is written up with its measurements in [docs/concurrency.md](docs/concurrency.md).

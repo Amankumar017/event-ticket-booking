@@ -1,0 +1,62 @@
+<h1>{{ registering() ? 'Create an account' : 'Sign in' }}</h1>
+
+<form class="form" (ngSubmit)="submit()">
+  @if (registering()) {
+    <label class="field">
+      <span class="field__label">Your name</span>
+      <input
+        name="displayName"
+        type="text"
+        autocomplete="name"
+        required
+        [ngModel]="displayName()"
+        (ngModelChange)="displayName.set($event)"
+      />
+    </label>
+  }
+
+  <label class="field">
+    <span class="field__label">Email</span>
+    <input
+      name="email"
+      type="email"
+      autocomplete="email"
+      required
+      [ngModel]="email()"
+      (ngModelChange)="email.set($event)"
+    />
+  </label>
+
+  <label class="field">
+    <span class="field__label">Password</span>
+    <input
+      name="password"
+      type="password"
+      [attr.autocomplete]="registering() ? 'new-password' : 'current-password'"
+      required
+      [ngModel]="password()"
+      (ngModelChange)="password.set($event)"
+    />
+    @if (registering()) {
+      <span class="field__hint">At least 12 characters.</span>
+    }
+  </label>
+
+  @if (problem(); as message) {
+    <p class="state state--error" role="alert">{{ message }}</p>
+  }
+
+  <button type="submit" class="submit" [disabled]="working()">
+    {{ registering() ? 'Create account' : 'Sign in' }}
+  </button>
+</form>
+
+<p class="switch">
+  @if (registering()) {
+    Already have an account?
+    <button type="button" class="link" (click)="toggleMode()">Sign in</button>
+  } @else {
+    New here?
+    <button type="button" class="link" (click)="toggleMode()">Create an account</button>
+  }
+</p>

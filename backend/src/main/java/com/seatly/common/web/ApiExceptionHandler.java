@@ -1,11 +1,16 @@
 package com.seatly.common.web;
 
+import com.seatly.account.CurrentAccount;
+import com.seatly.account.EmailAlreadyRegisteredException;
+import com.seatly.account.InvalidCredentialsException;
+import com.seatly.account.InvalidRefreshTokenException;
 import com.seatly.booking.SeatUnavailableException;
 import com.seatly.common.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,6 +46,39 @@ public class ApiExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
 		problem.setTitle("Seat unavailable");
 		problem.setType(URI.create("https://seatly.dev/problems/seat-unavailable"));
+		return problem;
+	}
+
+	@ExceptionHandler({InvalidCredentialsException.class, InvalidRefreshTokenException.class,
+			CurrentAccount.NotSignedInException.class})
+	public ProblemDetail handleUnauthenticated(RuntimeException exception) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+				HttpStatus.UNAUTHORIZED, exception.getMessage());
+		problem.setTitle("Not authenticated");
+		problem.setType(URI.create("https://seatly.dev/problems/not-authenticated"));
+		return problem;
+	}
+
+	@ExceptionHandler(EmailAlreadyRegisteredException.class)
+	public ProblemDetail handleDuplicateEmail(EmailAlreadyRegisteredException exception) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+		problem.setTitle("Already registered");
+		problem.setType(URI.create("https://seatly.dev/problems/already-registered"));
+		return problem;
+	}
+
+	/**
+	 * Method security refusals.
+	 * <p>
+	 * Needed explicitly: the catch-all below would otherwise turn a deliberate
+	 * 403 into a 500 and log a stack trace for a rule working exactly as written.
+	 */
+	@ExceptionHandler(AccessDeniedException.class)
+	public ProblemDetail handleAccessDenied(AccessDeniedException exception) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+				HttpStatus.FORBIDDEN, "You do not have access to that.");
+		problem.setTitle("Forbidden");
+		problem.setType(URI.create("https://seatly.dev/problems/forbidden"));
 		return problem;
 	}
 

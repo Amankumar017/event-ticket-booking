@@ -2,13 +2,17 @@ package com.seatly.booking;
 
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -48,6 +52,25 @@ public class BookingController {
 	@GetMapping("/{reference}")
 	public BookingView byReference(@PathVariable String reference) {
 		return bookings.byReference(reference);
+	}
+
+	/** The signed-in customer's own bookings. */
+	@GetMapping("/mine")
+	public List<BookingView> mine() {
+		return bookings.mine();
+	}
+
+	/**
+	 * Every booking for an event.
+	 * <p>
+	 * The role check lives on the method rather than in the URL pattern, so it
+	 * travels with the code it guards instead of sitting in a config file that a
+	 * later refactoring can leave behind.
+	 */
+	@GetMapping(params = "eventId")
+	@PreAuthorize("hasRole('ORGANIZER') or hasRole('ADMIN')")
+	public List<BookingView> forEvent(@RequestParam Long eventId) {
+		return bookings.forEvent(eventId);
 	}
 
 }

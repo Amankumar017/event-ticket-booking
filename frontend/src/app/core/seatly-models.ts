@@ -57,11 +57,10 @@ export interface Booking {
   readonly seats: readonly BookedSeat[];
 }
 
+/** Identity comes from the access token, so it is not in here. */
 export interface HoldRequest {
   readonly eventId: number;
   readonly eventSeatIds: readonly number[];
-  readonly customerName: string;
-  readonly customerEmail: string;
 }
 
 export interface SeatMap {

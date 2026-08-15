@@ -19,6 +19,33 @@
   font-size: 0.8rem;
 }
 
+.masthead__account {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+.masthead__who {
+  color: var(--muted);
+}
+
+.masthead__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.masthead__link:hover {
+  text-decoration: underline;
+}
+
 .page {
   max-width: 52rem;
   margin: 0 auto;

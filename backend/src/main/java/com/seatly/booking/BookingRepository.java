@@ -12,6 +12,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
 	Optional<Booking> findByReference(String reference);
 
+	List<Booking> findByEventIdOrderByIdAsc(Long eventId);
+
+	List<Booking> findByUserIdOrderByIdDesc(Long userId);
+
 	/**
 	 * Holds that ran out of time, oldest first.
 	 * <p>

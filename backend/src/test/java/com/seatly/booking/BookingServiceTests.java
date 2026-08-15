@@ -7,6 +7,9 @@ import com.seatly.event.EventSeatRepository;
 import com.seatly.event.EventSeatStatus;
 import com.seatly.support.IntegrationTest;
 import com.seatly.support.SeatlyFixtures;
+import com.seatly.support.TestAccounts;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +36,19 @@ class BookingServiceTests extends IntegrationTest {
 
 	@Autowired
 	private SeatlyFixtures fixtures;
+
+	@Autowired
+	private TestAccounts accounts;
+
+	@BeforeEach
+	void signIn() {
+		accounts.actAs(accounts.customer());
+	}
+
+	@AfterEach
+	void signOut() {
+		accounts.signOut();
+	}
 
 	@Test
 	void holdingSeatsStartsTheClockWithoutSellingAnything() {
@@ -99,8 +115,7 @@ class BookingServiceTests extends IntegrationTest {
 	void refusesASeatThatDoesNotExist() {
 		Event event = fixtures.onSaleEvent();
 
-		assertThatThrownBy(() -> bookingService.hold(new BookingRequest(
-				event.getId(), List.of(999_999L), "Aman", "aman@example.com")))
+		assertThatThrownBy(() -> bookingService.hold(new BookingRequest(event.getId(), List.of(999_999L))))
 				.isInstanceOf(NotFoundException.class);
 	}
 
@@ -195,11 +210,7 @@ class BookingServiceTests extends IntegrationTest {
 	}
 
 	private BookingRequest request(Event event, EventSeat... seats) {
-		return new BookingRequest(
-				event.getId(),
-				List.of(seats).stream().map(EventSeat::getId).toList(),
-				"Aman",
-				"aman@example.com");
+		return new BookingRequest(event.getId(), List.of(seats).stream().map(EventSeat::getId).toList());
 	}
 
 }

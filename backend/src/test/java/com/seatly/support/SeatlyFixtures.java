@@ -66,6 +66,11 @@ public class SeatlyFixtures {
 		return eventSeats.findSeatMap(event.getId());
 	}
 
+	/** Disables an account without going through any service. */
+	public void disableAccount(Long userId) {
+		jdbc.update("update app_user set enabled = false where id = ?", userId);
+	}
+
 	/**
 	 * Wipes every domain table, and the Redis guard keys with them.
 	 * <p>
@@ -78,7 +83,8 @@ public class SeatlyFixtures {
 	 */
 	public void wipe() {
 		jdbc.execute("""
-				truncate table booking_seat, booking, event_seat, seat, seat_section, event, venue
+				truncate table booking_seat, booking, event_seat, seat, seat_section, event, venue,
+				               refresh_token, app_user
 				restart identity cascade
 				""");
 

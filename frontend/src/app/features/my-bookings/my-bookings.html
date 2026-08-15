@@ -1,0 +1,33 @@
+<h1>Your bookings</h1>
+
+@if (bookings.isLoading()) {
+  <p class="state">Loading…</p>
+} @else if (bookings.error()) {
+  <p class="state state--error">Could not load your bookings.</p>
+} @else if (bookings.value().length === 0) {
+  <p class="state">
+    Nothing booked yet. <a routerLink="/">See what's on</a>.
+  </p>
+} @else {
+  <ul class="bookings">
+    @for (booking of bookings.value(); track booking.reference) {
+      <li class="booking">
+        <div class="booking__head">
+          <strong class="booking__reference">{{ booking.reference }}</strong>
+          <span class="booking__status booking__status--{{ booking.status.toLowerCase() }}">
+            {{ booking.status.toLowerCase() }}
+          </span>
+        </div>
+        <p class="booking__seats">
+          {{ booking.seats.length }} seat{{ booking.seats.length === 1 ? '' : 's' }} ·
+          {{ booking.totalMinor | minorCurrency: booking.currency }}
+        </p>
+        @if (booking.confirmedAt) {
+          <p class="booking__when">Booked {{ booking.confirmedAt | date: 'd MMM y, h:mm a' }}</p>
+        } @else if (booking.expiresAt) {
+          <p class="booking__when">Held until {{ booking.expiresAt | date: 'd MMM y, h:mm a' }}</p>
+        }
+      </li>
+    }
+  </ul>
+}

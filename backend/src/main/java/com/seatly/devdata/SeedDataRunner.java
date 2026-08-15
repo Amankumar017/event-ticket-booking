@@ -1,5 +1,8 @@
 package com.seatly.devdata;
 
+import com.seatly.account.AppUser;
+import com.seatly.account.AppUserRepository;
+import com.seatly.account.Role;
 import com.seatly.event.Event;
 import com.seatly.event.EventRepository;
 import com.seatly.event.EventSeat;
@@ -13,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,21 +41,33 @@ public class SeedDataRunner implements ApplicationRunner {
 
 	private static final String VENUE_NAME = "Prithvi Playhouse";
 
+	private static final String DEMO_PASSWORD = "seatly-demo-pass";
+
 	private final VenueRepository venues;
 	private final EventRepository events;
 	private final EventSeatRepository eventSeats;
+	private final AppUserRepository users;
+	private final PasswordEncoder passwords;
 
-	public SeedDataRunner(VenueRepository venues, EventRepository events, EventSeatRepository eventSeats) {
+	public SeedDataRunner(VenueRepository venues, EventRepository events, EventSeatRepository eventSeats,
+			AppUserRepository users, PasswordEncoder passwords) {
 		this.venues = venues;
 		this.events = events;
 		this.eventSeats = eventSeats;
+		this.users = users;
+		this.passwords = passwords;
 	}
 
 	@Override
 	@Transactional
 	public void run(ApplicationArguments args) {
+		// Each step checks for itself rather than one guard covering the lot.
+		// A single early return meant that adding accounts to this method left
+		// them uncreated on every database that already had the venue.
+		seedAccounts();
+
 		if (venues.existsByName(VENUE_NAME)) {
-			log.info("Seed data already present, leaving it alone");
+			log.info("Venue and event already present, leaving them alone");
 			return;
 		}
 
@@ -72,6 +88,31 @@ public class SeedDataRunner implements ApplicationRunner {
 
 		log.info("Seeded venue '{}' and event '{}' with {} seats",
 				venue.getName(), event.getTitle(), eventSeats.count());
+	}
+
+	/**
+	 * Two accounts to sign in with locally.
+	 * <p>
+	 * The password is in the source because this only ever runs under the
+	 * {@code seed} profile against a throwaway local database. Nothing here is
+	 * reachable from a deployment.
+	 */
+	private void seedAccounts() {
+		int created = createAccount("customer@example.com", "Aman Kumar", Role.CUSTOMER)
+				+ createAccount("organiser@example.com", "Prithvi Playhouse", Role.ORGANIZER);
+
+		if (created > 0) {
+			log.info("Seeded {} account(s): customer@example.com / organiser@example.com "
+					+ "(password: {})", created, DEMO_PASSWORD);
+		}
+	}
+
+	private int createAccount(String email, String displayName, Role role) {
+		if (users.existsByEmail(email)) {
+			return 0;
+		}
+		users.save(new AppUser(email, passwords.encode(DEMO_PASSWORD), displayName, role));
+		return 1;
 	}
 
 	/** Two sections: a premium stalls block down front, a cheaper balcony behind. */

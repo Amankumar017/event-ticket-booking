@@ -8,6 +8,7 @@ import com.seatly.event.EventSeat;
 import com.seatly.event.EventSeatRepository;
 import com.seatly.event.EventSeatStatus;
 import com.seatly.support.IntegrationTest;
+import com.seatly.support.TestAccounts;
 import com.seatly.venue.Seat;
 import com.seatly.venue.SeatSection;
 import com.seatly.venue.Venue;
@@ -54,6 +55,9 @@ class DomainMappingTests extends IntegrationTest {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+
+	@Autowired
+	private TestAccounts accounts;
 
 	@Test
 	void savingAVenueCascadesItsSectionsAndSeats() {
@@ -119,7 +123,7 @@ class DomainMappingTests extends IntegrationTest {
 		List<EventSeat> map = eventSeats.findSeatMap(event.getId());
 
 		String reference = "BK-" + UUID.randomUUID().toString().substring(0, 8);
-		Booking booking = new Booking(reference, event, "Aman", "aman@example.com",
+		Booking booking = new Booking(reference, event, accounts.customer(),
 				Instant.now().plus(Duration.ofMinutes(5)));
 		booking.addSeat(map.get(0));
 		booking.addSeat(map.get(4));

@@ -1,11 +1,13 @@
 package com.seatly.event;
 
+import com.seatly.account.SecurityConfiguration;
 import com.seatly.common.NotFoundException;
 import com.seatly.event.view.EventSummary;
 import com.seatly.event.view.SeatMapView;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -26,7 +28,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * proves nothing about whether the query is right, which is what
  * {@code EventApiIntegrationTests} is for.
  */
+// The slice loads controllers, not arbitrary configuration -- so without this
+// import the default "deny everything" chain applies and every browse is a 401.
 @WebMvcTest(EventController.class)
+@Import(SecurityConfiguration.class)
 class EventControllerTests {
 
 	@Autowired

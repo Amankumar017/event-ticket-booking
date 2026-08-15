@@ -6,6 +6,8 @@ import com.seatly.event.EventSeatRepository;
 import com.seatly.event.EventSeatStatus;
 import com.seatly.support.IntegrationTest;
 import com.seatly.support.SeatlyFixtures;
+import com.seatly.support.TestAccounts;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,6 +68,9 @@ class HoldLifecycleTests extends IntegrationTest {
 	@Autowired
 	private SeatlyFixtures fixtures;
 
+	@Autowired
+	private TestAccounts accounts;
+
 	@MockitoBean
 	private Clock clock;
 
@@ -80,8 +85,14 @@ class HoldLifecycleTests extends IntegrationTest {
 		given(holdGuard.tryClaimAll(any(), any())).willReturn(true);
 		fixtures.wipe();
 		at(NOON);
+		accounts.actAs(accounts.customer());
 		event = fixtures.onSaleEvent();
 		seats = fixtures.seatsOf(event);
+	}
+
+	@AfterEach
+	void signOut() {
+		accounts.signOut();
 	}
 
 	@Test
@@ -186,8 +197,7 @@ class HoldLifecycleTests extends IntegrationTest {
 	}
 
 	private BookingRequest request() {
-		return new BookingRequest(
-				event.getId(), List.of(seats.get(0).getId()), "Aman", "aman@example.com");
+		return new BookingRequest(event.getId(), List.of(seats.get(0).getId()));
 	}
 
 	private void at(Instant moment) {

@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { Auth } from '../../core/auth';
 import { BookingApi } from '../../core/booking-api';
 import { Countdown } from '../../core/countdown';
 import { MinorCurrencyPipe } from '../../core/minor-currency-pipe';
@@ -23,6 +24,8 @@ import { Booking, SeatMap, SeatView } from '../../core/seatly-models';
 })
 export class SeatMapPage {
   private readonly bookingApi = inject(BookingApi);
+  private readonly auth = inject(Auth);
+  private readonly router = inject(Router);
   private readonly countdown = inject(Countdown);
 
   readonly eventId = input.required<string>();
@@ -93,13 +96,20 @@ export class SeatMapPage {
       return;
     }
 
+    // Sending an anonymous visitor to sign in first is a courtesy, not a
+    // control: the server refuses an unauthenticated hold regardless.
+    if (!this.auth.isSignedIn()) {
+      this.router.navigate(['/sign-in'], {
+        queryParams: { returnTo: `/events/${this.eventId()}` },
+      });
+      return;
+    }
+
     this.begin();
     this.bookingApi
       .hold({
         eventId: seatMap.eventId,
         eventSeatIds: [...this.selectedIds()],
-        customerName: 'Aman',
-        customerEmail: 'aman@example.com',
       })
       .subscribe({
         next: (held) => {

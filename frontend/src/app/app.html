@@ -1,6 +1,16 @@
 <header class="masthead">
   <a class="masthead__brand" routerLink="/">Seatly</a>
   <span class="masthead__tagline">seat-level booking</span>
+
+  <nav class="masthead__account">
+    @if (auth.user(); as user) {
+      <a routerLink="/my-bookings" class="masthead__link">Your bookings</a>
+      <span class="masthead__who">{{ user.displayName }}</span>
+      <button type="button" class="masthead__link" (click)="signOut()">Sign out</button>
+    } @else {
+      <a routerLink="/sign-in" class="masthead__link">Sign in</a>
+    }
+  </nav>
 </header>
 
 <main class="page">
