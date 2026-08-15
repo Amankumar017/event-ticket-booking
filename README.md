@@ -21,13 +21,25 @@ strategy that fixes it.
 
 ## Running locally
 
-Requires Docker and a JDK 21 or newer. Maven is supplied by the wrapper.
+Requires Docker, a JDK 21 or newer, and Node 20.19+ for the frontend. Maven is
+supplied by the wrapper.
 
 ```bash
-docker compose up -d          # Postgres on 5433, Redis on 6380
+docker compose up -d                                    # Postgres 5433, Redis 6380
 cd backend
-./mvnw spring-boot:run        # http://localhost:8090
+./mvnw spring-boot:run -Dspring-boot.run.profiles=seed   # http://localhost:8090
 ```
+
+The `seed` profile puts one venue and one on-sale event into the database, and
+does nothing if they are already there.
+
+```bash
+cd frontend
+npm start                     # http://localhost:4200
+```
+
+The dev server proxies `/api` to port 8090, so the browser sees a single origin.
+CORS is configured separately for deployments where the two are served apart.
 
 Health, including database and Redis connectivity:
 
@@ -50,6 +62,7 @@ local services.
 
 | Service     | Host port |
 | ----------- | --------- |
+| Angular      | 4200      |
 | Application | 8090      |
 | PostgreSQL  | 5433      |
 | Redis       | 6380      |

@@ -1,0 +1,30 @@
+<h1>What's on</h1>
+
+@if (events.isLoading()) {
+  <p class="state">Loading events…</p>
+} @else if (events.error()) {
+  <p class="state state--error">
+    Could not reach the Seatly API. Is the backend running on port 8090?
+  </p>
+} @else if (events.value().length === 0) {
+  <p class="state">Nothing is on sale right now.</p>
+} @else {
+  <ul class="events">
+    @for (event of events.value(); track event.id) {
+      <li class="event">
+        <a class="event__link" [routerLink]="['/events', event.id]">
+          <h2 class="event__title">{{ event.title }}</h2>
+          <p class="event__venue">{{ event.venueName }}, {{ event.city }}</p>
+          <p class="event__when">{{ event.startsAt | date: 'EEE d MMM y, h:mm a' }}</p>
+          <p class="event__seats">
+            @if (event.availableSeats > 0) {
+              {{ event.availableSeats }} seats available
+            } @else {
+              Sold out
+            }
+          </p>
+        </a>
+      </li>
+    }
+  </ul>
+}

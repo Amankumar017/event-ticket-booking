@@ -1,0 +1,67 @@
+<a class="back" routerLink="/">← All events</a>
+
+@if (map.isLoading()) {
+  <p class="state">Loading the seating chart…</p>
+} @else if (map.error()) {
+  <p class="state state--error">That event could not be loaded.</p>
+} @else {
+  @if (map.value(); as seatMap) {
+    <header class="event-header">
+      <h1>{{ seatMap.title }}</h1>
+      <p class="event-header__meta">
+        {{ seatMap.venueName }}, {{ seatMap.city }} ·
+        {{ seatMap.startsAt | date: 'EEE d MMM y, h:mm a' }}
+      </p>
+    </header>
+
+    <div class="stage">Stage</div>
+
+    @for (section of seatMap.sections; track section.name) {
+      <section class="section">
+        <h2 class="section__name">{{ section.name }}</h2>
+        @for (row of section.rows; track row.label) {
+          <div class="row">
+            <span class="row__label">{{ row.label }}</span>
+            @for (seat of row.seats; track seat.eventSeatId) {
+              <button
+                type="button"
+                class="seat"
+                [class.seat--available]="seat.status === 'AVAILABLE'"
+                [class.seat--held]="seat.status === 'HELD'"
+                [class.seat--sold]="seat.status === 'SOLD'"
+                [class.seat--blocked]="seat.status === 'BLOCKED'"
+                [class.seat--selected]="isSelected(seat)"
+                [disabled]="seat.status !== 'AVAILABLE'"
+                [attr.aria-pressed]="isSelected(seat)"
+                [attr.aria-label]="seatTitle(seat)"
+                [title]="seatTitle(seat)"
+                (click)="toggle(seat)"
+              >
+                {{ seat.number }}
+              </button>
+            }
+          </div>
+        }
+      </section>
+    }
+
+    <ul class="legend">
+      <li><span class="swatch seat--available"></span> Available</li>
+      <li><span class="swatch seat--selected"></span> Selected</li>
+      <li><span class="swatch seat--held"></span> On hold</li>
+      <li><span class="swatch seat--sold"></span> Sold</li>
+    </ul>
+
+    @if (selectedCount() > 0) {
+      <div class="summary">
+        <span class="summary__text">
+          {{ selectedCount() }} seat{{ selectedCount() === 1 ? '' : 's' }} ·
+          {{ selectedTotalMinor() | minorCurrency: seatMap.currency }}
+        </span>
+        <button type="button" class="summary__action" disabled>
+          Booking arrives in stage 4
+        </button>
+      </div>
+    }
+  }
+}
