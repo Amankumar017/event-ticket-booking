@@ -1,14 +1,19 @@
 package com.seatly.common.web;
 
+import com.seatly.booking.SeatUnavailableException;
 import com.seatly.common.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Turns exceptions into RFC 9457 problem documents.
@@ -28,6 +33,36 @@ public class ApiExceptionHandler {
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
 		problem.setTitle("Not found");
 		problem.setType(URI.create("https://seatly.dev/problems/not-found"));
+		return problem;
+	}
+
+	@ExceptionHandler(SeatUnavailableException.class)
+	public ProblemDetail handleSeatUnavailable(SeatUnavailableException exception) {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+		problem.setTitle("Seat unavailable");
+		problem.setType(URI.create("https://seatly.dev/problems/seat-unavailable"));
+		return problem;
+	}
+
+	/**
+	 * Bean validation failures.
+	 * <p>
+	 * Needed explicitly: the catch-all below would otherwise swallow a bad
+	 * request and report it as a 500, which blames the server for the client's
+	 * mistake and hides the reason.
+	 */
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ProblemDetail handleInvalidRequest(MethodArgumentNotValidException exception) {
+		Map<String, String> errors = new LinkedHashMap<>();
+		for (FieldError error : exception.getBindingResult().getFieldErrors()) {
+			errors.putIfAbsent(error.getField(), error.getDefaultMessage());
+		}
+
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+				HttpStatus.BAD_REQUEST, "The request was not valid.");
+		problem.setTitle("Invalid request");
+		problem.setType(URI.create("https://seatly.dev/problems/invalid-request"));
+		problem.setProperty("errors", errors);
 		return problem;
 	}
 
