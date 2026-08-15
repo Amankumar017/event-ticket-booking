@@ -1,39 +1,19 @@
 package com.seatly;
 
+import com.seatly.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Boots the whole application against throwaway Postgres and Redis containers.
- * <p>
- * The containers are started once for the class and wired in by
- * {@code @ServiceConnection}, which overrides the datasource and Redis
- * properties at runtime -- so these tests never touch the developer's local
- * database and never need a separate test configuration file.
+ * Boots the whole application against throwaway Postgres and Redis containers
+ * and checks that the schema was built by Flyway rather than by anything else.
  */
-@SpringBootTest
-@Testcontainers
-class SeatlyApplicationTests {
-
-	@Container
-	@ServiceConnection
-	static final PostgreSQLContainer<?> POSTGRES =
-			new PostgreSQLContainer<>(DockerImageName.parse("postgres:17-alpine"));
-
-	@Container
-	@ServiceConnection(name = "redis")
-	static final GenericContainer<?> REDIS =
-			new GenericContainer<>(DockerImageName.parse("redis:8-alpine")).withExposedPorts(6379);
+class SeatlyApplicationTests extends IntegrationTest {
 
 	@Autowired
 	private JdbcTemplate jdbc;
@@ -44,11 +24,11 @@ class SeatlyApplicationTests {
 	}
 
 	@Test
-	void flywayAppliedTheBaselineMigration() {
+	void flywayAppliedEveryMigration() {
 		Integer applied = jdbc.queryForObject(
 				"select count(*) from flyway_schema_history where success", Integer.class);
 
-		assertThat(applied).isNotNull().isGreaterThanOrEqualTo(1);
+		assertThat(applied).isNotNull().isGreaterThanOrEqualTo(2);
 	}
 
 	@Test
@@ -57,6 +37,21 @@ class SeatlyApplicationTests {
 				"select count(*) from pg_proc where proname = 'set_updated_at'", Integer.class);
 
 		assertThat(functions).isEqualTo(1);
+	}
+
+	/**
+	 * Hibernate runs with {@code ddl-auto: validate}, so the context would not
+	 * have started at all if an entity disagreed with the migrated schema. This
+	 * asserts the other half: that the tables exist under the names expected.
+	 */
+	@Test
+	void everyDomainTableWasMigrated() {
+		List<String> tables = jdbc.queryForList(
+				"select table_name from information_schema.tables where table_schema = 'public'",
+				String.class);
+
+		assertThat(tables).contains(
+				"venue", "seat_section", "seat", "event", "event_seat", "booking", "booking_seat");
 	}
 
 }
