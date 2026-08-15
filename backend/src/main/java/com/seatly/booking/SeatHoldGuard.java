@@ -18,7 +18,7 @@ import java.util.List;
  * <h2>What this is not</h2>
  *
  * It is not where holds live. The database owns that, and it is the only thing
- * that decides whether a seat can be claimed -- see {@link BookingService},
+ * that decides whether a seat can be claimed: see {@link BookingService},
  * which takes a row lock and re-checks regardless of what Redis said.
  * <p>
  * Two stores that both claim to know whether a seat is free is a distributed
@@ -87,7 +87,7 @@ public class SeatHoldGuard {
 	 * <p>
 	 * Called when a hold is confirmed, cancelled or released early, and whenever
 	 * the transaction that claimed them did not commit. Missing this would leave
-	 * seats looking taken until the TTL ran out -- inconvenient rather than
+	 * seats looking taken until the TTL ran out: inconvenient rather than
 	 * incorrect, since the database would still let the next caller through.
 	 */
 	public void releaseAll(Collection<Long> eventSeatIds) {

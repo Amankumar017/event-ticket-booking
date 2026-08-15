@@ -2,7 +2,7 @@
  * Wire format of the Seatly API.
  *
  * These mirror the backend's view records exactly. Prices are in minor units
- * (paise) end to end -- the division by 100 happens once, in the pipe that
+ * (paise) end to end, the division by 100 happens once, in the pipe that
  * formats them, and never in arithmetic.
  */
 

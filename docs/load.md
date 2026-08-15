@@ -12,14 +12,14 @@ different seat, and everybody wants the same one.
 ## What the numbers are, and what they are not
 
 **The measurements below describe this laptop.** Across three runs the
-sell-out scenario varied by more than a factor of two — 67 to 172 holds a
-second — because two hundred simultaneous commits on a developer machine
-compete with everything else running on it. Quoting a single number would be
+sell-out scenario varied by more than a factor of two, from 67 to 172 holds a
+second, because two hundred simultaneous commits on a developer machine compete
+with everything else running on it. Quoting a single number would be
 inventing a precision that is not there.
 
 **The assertions are the point.** They held identically on every run:
 
-- every hold either succeeded or was honestly refused — **zero errors**
+- every hold either succeeded or was honestly refused: **zero errors**
 - **zero seats claimed twice**, checked by the audit query
 - when two hundred people wanted one seat, **exactly one got it**
 
@@ -41,7 +41,7 @@ The latencies look alarming until you notice the connection pool is **ten**.
 Two hundred callers arriving together means a hundred and ninety of them are
 queueing for a connection before they do anything at all, and each one's
 measured latency includes that wait. This is a picture of a deliberately small
-pool under a deliberately unreasonable spike, not of a slow booking path — and
+pool under a deliberately unreasonable spike, not of a slow booking path, and
 `hikaricp_connections_pending` on the Grafana dashboard shows exactly that
 queue.
 
@@ -59,8 +59,8 @@ this is two hundred.
 Faster than the sell-out scenario, and consistently so, which is worth a moment:
 a hundred and ninety-nine of these requests are turned away by the Redis guard
 before they ever open a transaction. Rejecting early is cheaper than queueing,
-which is the entire argument for having the guard — and the reason it is
-allowed to say "no" but never "yes".
+which is the entire argument for having the guard, and the reason it is allowed
+to say "no" but never "yes".
 
 Compare with the unlocked implementation measured in
 [concurrency.md](concurrency.md), which at eight contenders either deadlocked

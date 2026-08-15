@@ -9,22 +9,22 @@ import { signedInGuard } from './core/signed-in-guard';
 export const routes: Routes = [
   {
     path: '',
-    title: 'Seatly — what’s on',
+    title: 'Seatly · what’s on',
     loadComponent: () => import('./features/event-list/event-list').then((m) => m.EventList),
   },
   {
     path: 'events/:eventId',
-    title: 'Seatly — choose your seats',
+    title: 'Seatly · choose your seats',
     loadComponent: () => import('./features/seat-map/seat-map').then((m) => m.SeatMapPage),
   },
   {
     path: 'sign-in',
-    title: 'Seatly — sign in',
+    title: 'Seatly · sign in',
     loadComponent: () => import('./features/sign-in/sign-in').then((m) => m.SignIn),
   },
   {
     path: 'my-bookings',
-    title: 'Seatly — your bookings',
+    title: 'Seatly · your bookings',
     canActivate: [signedInGuard],
     loadComponent: () => import('./features/my-bookings/my-bookings').then((m) => m.MyBookings),
   },

@@ -19,7 +19,7 @@ import java.time.Instant;
  * <p>
  * This is the contended row. Every booking attempt in this system resolves to a
  * read and a write of exactly one {@code event_seat}, which is what makes the
- * concurrency question tractable -- there is a single place where two callers
+ * concurrency question tractable: there is a single place where two callers
  * can collide, and a single place to serialise them.
  * <p>
  * There is deliberately no {@code @Version} field yet. Optimistic locking
@@ -37,7 +37,7 @@ public class EventSeat extends BaseEntity {
 	@JoinColumn(name = "seat_id", nullable = false)
 	private Seat seat;
 
-	/** Minor units -- paise, not rupees. See the note in V2__domain.sql. */
+	/** Minor units: paise, not rupees. See the note in V2__domain.sql. */
 	@Column(name = "price_minor", nullable = false)
 	private long priceMinor;
 
@@ -59,7 +59,7 @@ public class EventSeat extends BaseEntity {
 	 * the value. A second transaction that read the row earlier finds its update
 	 * matches nothing and fails rather than overwriting work it never saw.
 	 * <p>
-	 * The booking path does not rely on this -- it takes a real lock before it
+	 * The booking path does not rely on this; it takes a real lock before it
 	 * reads. This is the safety net for every other write path.
 	 */
 	@Version

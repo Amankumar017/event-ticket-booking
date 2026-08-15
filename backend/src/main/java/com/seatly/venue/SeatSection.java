@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A named block of a venue -- Stalls, Balcony, Box.
+ * A named block of a venue: Stalls, Balcony, Box.
  */
 @Entity
 @Table(name = "seat_section")

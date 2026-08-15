@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * <p>
  * Every method takes its notion of "now" from an injected {@link Clock} rather
  * than calling {@code Instant.now()} inline. That one indirection is what makes
- * expiry testable -- a test can hand this service a clock positioned after a
+ * expiry testable: a test can hand this service a clock positioned after a
  * hold has lapsed instead of sleeping through it.
  */
 @Service

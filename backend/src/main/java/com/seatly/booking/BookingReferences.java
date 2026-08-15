@@ -10,7 +10,7 @@ import java.security.SecureRandom;
  * The alphabet leaves out I, O, 0 and 1, because these get read aloud down a
  * phone line and typed back in by somebody who cannot tell them apart. Eight
  * characters from a 32-symbol alphabet is 40 bits, which is far more than enough
- * to make collisions a non-event at this scale -- and the unique constraint on
+ * to make collisions a non-event at this scale, and the unique constraint on
  * the column is there to catch the case where it is not.
  */
 @Component

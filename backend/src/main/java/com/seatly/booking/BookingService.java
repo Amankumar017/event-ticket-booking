@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  *
  * An earlier version read the seats, checked they were free, and then wrote
  * them. It passed every single-threaded test and failed two different ways
- * under load -- deadlocking seven callers out of eight, or, with the writes
+ * under load, deadlocking seven callers out of eight, or, with the writes
  * reordered, quietly selling one chair to all eight. Both measurements are in
  * {@code docs/concurrency.md}.
  * <p>
@@ -124,7 +124,7 @@ public class BookingService {
 		// the same seat twice cannot claim it twice.
 		List<Long> seatIds = request.eventSeatIds().stream().distinct().sorted().toList();
 
-		// Cheap rejection before any transaction work. Only ever a "no" -- a
+		// Cheap rejection before any transaction work. Only ever a "no", a
 		// "yes" here means nothing until the database agrees below.
 		if (!holdGuard.tryClaimAll(seatIds, holdProperties.ttl())) {
 			throw new SeatUnavailableException("Somebody else is holding one of those seats");
@@ -169,7 +169,7 @@ public class BookingService {
 	 * only thing that turns a hold into a sale, and this is called by the webhook
 	 * that reports it. Since there is no signed-in account behind a webhook there
 	 * is no ownership check here, which is why this is a separate method rather
-	 * than a flag on one -- a boolean that switches off an authorisation check is
+	 * than a flag on one: a boolean that switches off an authorisation check is
 	 * the kind of thing that ends up being passed from somewhere it should not
 	 * be.
 	 * <p>
@@ -241,7 +241,7 @@ public class BookingService {
 	/**
 	 * Every booking for an event, for the people who run it.
 	 * <p>
-	 * No ownership check here, deliberately -- an organiser is meant to see other
+	 * No ownership check here, deliberately: an organiser is meant to see other
 	 * people's bookings. The role check on the endpoint is what stands between
 	 * this and a customer reading the whole guest list.
 	 */
@@ -370,8 +370,8 @@ public class BookingService {
 	 * <p>
 	 * Without it, a caller who claims the guard and then loses on the database
 	 * check would leave the seat looking taken for the whole TTL. Inconvenient
-	 * rather than incorrect -- the database would still let the next caller
-	 * through -- but there is no reason to make people wait for nothing.
+	 * rather than incorrect, since the database would still let the next caller
+	 * through, but there is no reason to make people wait for nothing.
 	 */
 	private void releaseGuardIfThisTransactionFails(List<Long> seatIds) {
 		if (!TransactionSynchronizationManager.isSynchronizationActive()) {

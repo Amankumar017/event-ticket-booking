@@ -1,53 +1,84 @@
+/*
+ * The marquee strip. Kept deliberately thin and quiet: the seating chart is the
+ * only thing on this site anybody came to look at.
+ */
 .masthead {
   display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.1rem 1.75rem;
+  border-bottom: var(--rule);
+  /* A hairline of stage light along the bottom edge. */
+  box-shadow: 0 1px 0 rgba(255, 194, 77, 0.07);
 }
 
 .masthead__brand {
-  color: var(--text);
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  color: var(--ink);
   text-decoration: none;
+  font-family: var(--display);
+  font-size: var(--step-1);
+  font-weight: 700;
+  font-variation-settings: 'SOFT' 20, 'WONK' 1;
+  letter-spacing: -0.01em;
 }
 
-.masthead__tagline {
-  color: var(--muted);
-  font-size: 0.8rem;
+.masthead__house {
+  font-family: var(--data);
+  font-size: var(--step--1);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
 .masthead__account {
   display: flex;
   align-items: baseline;
-  gap: 1rem;
+  gap: 1.25rem;
   margin-left: auto;
-  font-size: 0.85rem;
+  font-size: var(--step--1);
 }
 
 .masthead__who {
-  color: var(--muted);
+  color: var(--ink-dim);
 }
 
 .masthead__link {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--ink-dim);
   font: inherit;
-  font-size: 0.85rem;
   text-decoration: none;
   cursor: pointer;
+  transition: color 140ms ease;
 }
 
 .masthead__link:hover {
-  text-decoration: underline;
+  color: var(--stage);
 }
 
 .page {
-  max-width: 52rem;
+  max-width: 58rem;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: 3rem 1.75rem 7rem;
+}
+
+@media (max-width: 40rem) {
+  .masthead {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+  }
+
+  .masthead__house {
+    display: none;
+  }
+
+  .page {
+    padding: 2rem 1.1rem 7rem;
+  }
 }

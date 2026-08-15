@@ -4,7 +4,7 @@ build/
 *.jar
 *.war
 
-# Working notes -- kept local on purpose
+# Working notes, kept local on purpose
 docs/notes/
 
 # Node / Angular

@@ -37,8 +37,8 @@ public class PaymentWebhookController {
 	 * <h2>The raw body, not the parsed object</h2>
 	 *
 	 * The signature covers the exact bytes the provider sent. Re-serialising a
-	 * parsed object produces different bytes -- different key order, different
-	 * whitespace -- and the signature would never match. So the body arrives as a
+	 * parsed object produces different bytes, different key order, different
+	 * whitespace, and the signature would never match. So the body arrives as a
 	 * string, is verified as a string, and only then parsed.
 	 *
 	 * <h2>Why the answers are what they are</h2>

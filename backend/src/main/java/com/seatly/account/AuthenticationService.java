@@ -98,7 +98,7 @@ public class AuthenticationService {
 	 * <h2>The revocation has to outlive the failure</h2>
 	 *
 	 * {@code noRollbackFor} is load-bearing. Every path that revokes anything here
-	 * then throws, and a rollback would undo the revocation along with it -- the
+	 * then throws, and a rollback would undo the revocation along with it; the
 	 * response would say no while the database quietly kept the stolen session
 	 * alive. Nothing else in this method writes before it throws, so committing
 	 * on failure commits exactly the revocations and nothing more.

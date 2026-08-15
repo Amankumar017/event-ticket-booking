@@ -30,7 +30,7 @@ export class Countdown {
   secondsUntil(deadline: Signal<string | null>): Signal<number> {
     // Outside the Angular zone, deliberately. A timer inside it would run a
     // global change detection pass every second whether or not anything moved,
-    // and would leave a test fixture permanently unstable -- zone.js counts a
+    // and would leave a test fixture permanently unstable: zone.js counts a
     // repeating interval as work still in flight, so whenStable() never
     // resolves. Writing to a signal schedules its own update, so nothing is
     // lost by opting out.

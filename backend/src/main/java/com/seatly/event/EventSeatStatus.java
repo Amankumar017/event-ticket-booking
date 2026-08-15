@@ -11,7 +11,7 @@ public enum EventSeatStatus {
 	/** Paid for. Terminal, short of a refund. */
 	SOLD,
 
-	/** Withheld from sale -- restricted view, production use, damage. */
+	/** Withheld from sale: restricted view, production use, damage. */
 	BLOCKED
 
 }

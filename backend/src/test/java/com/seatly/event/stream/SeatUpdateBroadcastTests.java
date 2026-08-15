@@ -33,7 +33,7 @@ import static org.awaitility.Awaitility.await;
  *
  * A recording emitter is subscribed through the real registry, so what these
  * tests observe has genuinely been published to Redis, read back by the
- * subscriber, and handed to a watcher -- the same journey a customer's browser
+ * subscriber, and handed to a watcher, the same journey a customer's browser
  * puts it through.
  *
  * <h2>Not transactional</h2>

@@ -1,31 +1,52 @@
-:root {
-  --bg: #0f1115;
-  --surface: #14171d;
-  --surface-raised: #1a1e26;
-  --border: #2a2f3a;
-  --text: #e6e8ec;
-  --muted: #8b93a3;
-  --accent: #4f9cf9;
-  --accent-contrast: #0b0d11;
-  --held: #d99a2b;
-  --sold: #3a3f4b;
-  --error: #e5646d;
-}
+/*
+ * Seatly: "the house, lit from the stage"
+ *
+ * The page is a small auditorium with the lights down. The stage is the only
+ * real light source, and it falls off across the rows: the stalls sit in it,
+ * the balcony sits at the edge of it. That falloff is not decoration; it is
+ * the price gradient, because in this hall the closer seats cost more.
+ *
+ * Committed to one look rather than following the system theme. A darkened
+ * house is the whole idea, and a light version of it would be a different
+ * design wearing the same markup.
+ */
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f7f8fa;
-    --surface: #ffffff;
-    --surface-raised: #ffffff;
-    --border: #dfe3e9;
-    --text: #1a1e26;
-    --muted: #6b7280;
-    --accent: #1f6feb;
-    --accent-contrast: #ffffff;
-    --held: #b8770f;
-    --sold: #d3d7de;
-    --error: #c0303a;
-  }
+:root {
+  /* The hall */
+  --house: #12101e;
+  --house-deep: #0b0912;
+  --house-raised: #1b1830;
+  --house-edge: #2a2544;
+
+  /* The light. Marigold, the flower on every Indian stage. */
+  --stage: #ffc24d;
+  --stage-core: #ff9a3c;
+  --stage-glow: rgba(255, 194, 77, 0.16);
+
+  /* Seat states */
+  --brass: #c9922b;
+  --taken: #322d4a;
+
+  /* Text, very slightly violet so it belongs to the indigo */
+  --ink: #efe9f7;
+  --ink-dim: #8b84a6;
+  --ink-faint: #635d7d;
+
+  --alert: #ff7b7b;
+
+  --display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --body: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --data: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* A type scale with a bit of room in it, so the display face can be large. */
+  --step--1: 0.8125rem;
+  --step-0: 0.9375rem;
+  --step-1: 1.125rem;
+  --step-2: 1.5rem;
+  --step-3: clamp(1.7rem, 1.3rem + 1.6vw, 2.4rem);
+
+  --rule: 1px solid var(--house-edge);
+  --radius: 0.5rem;
 }
 
 * {
@@ -39,13 +60,76 @@ body {
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  line-height: 1.5;
+  min-height: 100dvh;
+  background:
+    /* the wash from the stage, high and centred */
+    radial-gradient(120% 70% at 50% -12%, var(--stage-glow), transparent 62%),
+    linear-gradient(180deg, var(--house) 0%, var(--house-deep) 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-variation-settings: 'SOFT' 20, 'WONK' 1;
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+  margin: 0;
+}
+
+a {
+  color: var(--stage);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* One focus treatment everywhere: the stage light finds it. */
+:focus-visible {
+  outline: 2px solid var(--stage);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* Shared small pieces -------------------------------------------------- */
+
+.eyebrow {
+  font-family: var(--data);
+  font-size: var(--step--1);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.state {
+  color: var(--ink-dim);
+}
+
+.state--error {
+  color: var(--alert);
+}
+
+.money {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

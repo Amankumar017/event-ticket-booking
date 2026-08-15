@@ -32,7 +32,7 @@ public interface EventSeatRepository extends JpaRepository<EventSeat, Long> {
 	 * <p>
 	 * One grouped query rather than one count per event: asking per event turns a
 	 * ten-row listing into eleven round trips. The condition matches the rule the
-	 * seat map uses -- a hold whose deadline has passed is buyable again, whether
+	 * seat map uses: a hold whose deadline has passed is buyable again, whether
 	 * or not anything has tidied the row up yet.
 	 */
 	@Query("""
@@ -56,14 +56,14 @@ public interface EventSeatRepository extends JpaRepository<EventSeat, Long> {
 	 * Hibernate's PostgreSQL dialect renders {@code PESSIMISTIC_WRITE} as
 	 * {@code for no key update}, not {@code for update}, and the difference
 	 * matters. {@code for no key update} still excludes other bookers, but it
-	 * permits the {@code for key share} locks that foreign keys take -- so the
+	 * permits the {@code for key share} locks that foreign keys take, so the
 	 * {@code booking_seat} insert pointing back at this row no longer contends
 	 * with it. That is exactly the cycle that deadlocked the unlocked version.
 	 * <p>
 	 * The {@code order by} is not cosmetic. Two bookings for the overlapping sets
 	 * {A, B} and {B, A} would take their locks in opposite orders and deadlock.
-	 * Locking in a fixed order -- any fixed order, as long as everyone agrees --
-	 * makes that impossible.
+	 * Locking in a fixed order, any fixed order at all as long as everyone agrees on
+	 * it, makes that impossible.
 	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select es from EventSeat es where es.id in :ids order by es.id asc")

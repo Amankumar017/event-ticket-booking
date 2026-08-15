@@ -25,7 +25,7 @@ import java.util.List;
  * <p>
  * A booking is created PENDING with an expiry, and only becomes CONFIRMED once
  * payment lands. The lines are cascaded because they have no life of their own,
- * and a booking is small by nature -- nobody buys ten thousand seats at once.
+ * and a booking is small by nature: nobody buys ten thousand seats at once.
  */
 @Entity
 @Table(name = "booking")

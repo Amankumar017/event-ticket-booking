@@ -1,6 +1,10 @@
-h1 {
-  margin: 0 0 1.5rem;
-  font-size: 1.6rem;
+.masthead-block {
+  margin-bottom: 3rem;
+}
+
+.masthead-block h1 {
+  margin-top: 0.4rem;
+  font-size: var(--step-3);
 }
 
 .bookings {
@@ -11,55 +15,119 @@ h1 {
   list-style: none;
 }
 
-.booking {
-  padding: 1rem 1.25rem;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
-}
+/* The stub ------------------------------------------------------------- */
 
-.booking__head {
+.stub {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  align-items: stretch;
+  gap: 1.25rem;
+  background: var(--house-raised);
+  border: 1px solid var(--house-edge);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
-.booking__reference {
-  font-variant-numeric: tabular-nums;
+/*
+ * The counterfoil, torn off along a perforation. The dashed rule is the tear
+ * line, which is why it is on the inside edge and nowhere else.
+ */
+.stub__counterfoil {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1rem 1.25rem;
+  border-right: 1px dashed var(--house-edge);
+  background: rgba(255, 194, 77, 0.03);
+}
+
+.stub__reference {
+  font-family: var(--data);
+  font-size: var(--step--1);
   letter-spacing: 0.03em;
+  color: var(--ink);
 }
 
-.booking__status {
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
+.stub__status {
+  font-family: var(--data);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink-faint);
 }
 
-.booking__status--confirmed {
-  color: var(--accent);
+.stub[data-status='confirmed'] .stub__status {
+  color: var(--stage);
 }
 
-.booking__status--pending {
-  color: var(--held);
+.stub[data-status='pending'] .stub__status {
+  color: var(--brass);
 }
 
-.booking__seats,
-.booking__when {
-  margin: 0.4rem 0 0;
-  font-size: 0.85rem;
-  color: var(--muted);
+.stub__body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem 1rem 0;
 }
 
-.state {
-  color: var(--muted);
+.stub__seats {
+  font-size: var(--step-0);
+}
+
+.stub__dot {
+  padding: 0 0.3rem;
+  color: var(--ink-faint);
+}
+
+.stub__when {
+  font-size: var(--step--1);
+  color: var(--ink-dim);
 }
 
 .state--error {
-  color: var(--error);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-a {
-  color: var(--accent);
+.state--error p {
+  margin: 0;
+}
+
+.ghost-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--house-edge);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: var(--step--1);
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.ghost-button:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+@media (max-width: 40rem) {
+  .stub {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .stub__counterfoil {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-right: 0;
+    border-bottom: 1px dashed var(--house-edge);
+  }
+
+  .stub__body {
+    padding: 1rem 1.25rem;
+  }
 }

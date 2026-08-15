@@ -14,7 +14,7 @@ export interface SeatChanged {
  * <h2>EventSource, not a WebSocket</h2>
  *
  * The traffic is one way, and the browser already knows how to reconnect an
- * `EventSource` on its own -- including backing off, and telling the server
+ * `EventSource` on its own, including backing off, and telling the server
  * where it left off. A WebSocket would mean writing that reconnect loop by hand
  * for a direction nothing here uses.
  *
@@ -22,7 +22,7 @@ export interface SeatChanged {
  *
  * What a seat map needs is what each seat is now. Keeping a map keyed by seat id
  * means a reconnection that misses messages costs nothing beyond a stale seat
- * until the next change or the next reload -- there is no queue to replay and
+ * until the next change or the next reload, there is no queue to replay and
  * nothing to get out of order.
  */
 @Injectable({ providedIn: 'root' })

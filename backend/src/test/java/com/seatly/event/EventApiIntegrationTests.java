@@ -21,8 +21,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * The same endpoints, this time over the real schema and real queries.
  * <p>
- * This is where the rule that a lapsed hold reads as available gets proved --
- * it depends on the query, the entity and the clock agreeing with each other,
+ * This is where the rule that a lapsed hold reads as available gets proved. It
+ * depends on the query, the entity and the clock agreeing with each other,
  * which a mocked service could never show.
  */
 @AutoConfigureMockMvc

@@ -52,7 +52,7 @@ public class SeatUpdateBroadcaster {
 		}
 		catch (Exception unavailable) {
 			// Swallowed on purpose. This runs after the commit, so throwing would
-			// not undo the booking -- it would only turn a successful sale into an
+			// not undo the booking; it would only turn a successful sale into an
 			// error the customer sees. A missed update costs a stale seat map
 			// until the next reload.
 			log.warn("Could not broadcast a seat update: {}", unavailable.getMessage());

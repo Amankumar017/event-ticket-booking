@@ -1,32 +1,46 @@
-<h1>Your bookings</h1>
+<header class="masthead-block">
+  <p class="eyebrow">Box office</p>
+  <h1>Your bookings</h1>
+</header>
 
 @if (bookings.isLoading()) {
-  <p class="state">Loading…</p>
+  <p class="state">Looking them up…</p>
 } @else if (bookings.error()) {
-  <p class="state state--error">Could not load your bookings.</p>
+  <div class="state state--error">
+    <p>Can't load your bookings.</p>
+    <button type="button" class="ghost-button" (click)="bookings.reload()">Try again</button>
+  </div>
 } @else if (bookings.value().length === 0) {
   <p class="state">
-    Nothing booked yet. <a routerLink="/">See what's on</a>.
+    You haven't booked anything yet. <a routerLink="/">See what's on</a>.
   </p>
 } @else {
   <ul class="bookings">
     @for (booking of bookings.value(); track booking.reference) {
-      <li class="booking">
-        <div class="booking__head">
-          <strong class="booking__reference">{{ booking.reference }}</strong>
-          <span class="booking__status booking__status--{{ booking.status.toLowerCase() }}">
-            {{ booking.status.toLowerCase() }}
+      <!--
+        Shaped like the stub you would be handed at the door: the reference on
+        the counterfoil, the seats on the ticket.
+      -->
+      <li class="stub" [attr.data-status]="booking.status.toLowerCase()">
+        <span class="stub__counterfoil">
+          <span class="stub__reference">{{ booking.reference }}</span>
+          <span class="stub__status">{{ booking.status.toLowerCase() }}</span>
+        </span>
+
+        <span class="stub__body">
+          <span class="stub__seats">
+            {{ booking.seats.length }} seat{{ booking.seats.length === 1 ? '' : 's' }}
+            <span class="stub__dot">·</span>
+            <span class="money">{{ booking.totalMinor | minorCurrency: booking.currency }}</span>
           </span>
-        </div>
-        <p class="booking__seats">
-          {{ booking.seats.length }} seat{{ booking.seats.length === 1 ? '' : 's' }} ·
-          {{ booking.totalMinor | minorCurrency: booking.currency }}
-        </p>
-        @if (booking.confirmedAt) {
-          <p class="booking__when">Booked {{ booking.confirmedAt | date: 'd MMM y, h:mm a' }}</p>
-        } @else if (booking.expiresAt) {
-          <p class="booking__when">Held until {{ booking.expiresAt | date: 'd MMM y, h:mm a' }}</p>
-        }
+          <span class="stub__when">
+            @if (booking.confirmedAt) {
+              Paid {{ booking.confirmedAt | date: 'd MMM y, h:mm a' }}
+            } @else if (booking.expiresAt) {
+              Held until {{ booking.expiresAt | date: 'h:mm a' }}
+            }
+          </span>
+        </span>
       </li>
     }
   </ul>

@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <h2>Why this needs threads</h2>
  *
- * The interesting case is not a client retrying after a timeout -- that is
+ * The interesting case is not a client retrying after a timeout: that is
  * sequential, and covered by the API tests. It is a client that retried while
  * the first attempt was still running, which is exactly what an impatient
  * user's second click looks like from the server's side.

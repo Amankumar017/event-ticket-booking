@@ -12,7 +12,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 	 * Events a customer can currently buy into.
 	 * <p>
 	 * The venue is joined in up front. Without it, rendering a list of ten events
-	 * costs eleven queries -- one for the events, then one per venue as each lazy
+	 * costs eleven queries: one for the events, then one per venue as each lazy
 	 * proxy is touched. That is the N+1 problem, and it is invisible until the
 	 * list gets long.
 	 */

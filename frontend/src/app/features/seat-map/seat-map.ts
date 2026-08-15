@@ -16,7 +16,7 @@ import { BookingApi } from '../../core/booking-api';
 import { Countdown } from '../../core/countdown';
 import { MinorCurrencyPipe } from '../../core/minor-currency-pipe';
 import { SeatStream } from '../../core/seat-stream';
-import { Booking, SeatMap, SeatView } from '../../core/seatly-models';
+import { Booking, SeatMap, SectionView, SeatView } from '../../core/seatly-models';
 import { switchMap } from 'rxjs';
 
 /**
@@ -24,7 +24,7 @@ import { switchMap } from 'rxjs';
  *
  * {@code eventId} arrives as a route parameter bound straight to an input
  * signal, which means the resource below re-fetches by itself when the route
- * changes -- no subscription to `paramMap`, no manual reload.
+ * changes, no subscription to `paramMap`, no manual reload.
  */
 @Component({
   selector: 'app-seat-map',
@@ -126,6 +126,40 @@ export class SeatMapPage {
     }
     return total;
   });
+
+  /** What the customer has picked, named the way the tickets will be. */
+  protected readonly selectedLabels = computed(() => {
+    const chosen = this.selectedIds();
+    const labels: string[] = [];
+    for (const section of this.liveMap()?.sections ?? []) {
+      for (const row of section.rows) {
+        for (const seat of row.seats) {
+          if (chosen.has(seat.eventSeatId)) {
+            labels.push(seat.label);
+          }
+        }
+      }
+    }
+    return labels.join(', ');
+  });
+
+  protected seatLabels(booking: Booking): string {
+    return booking.seats.map((seat) => seat.label).join(', ');
+  }
+
+  /** What a seat in this section costs. Every seat in one shares a price. */
+  protected priceOf(section: SectionView): number {
+    return Math.min(...section.rows.flatMap((row) => row.seats.map((seat) => seat.priceMinor)));
+  }
+
+  /**
+   * Whether this seat's status arrived over the live stream rather than with the
+   * page. Drives a one-off flare, so somebody else taking a seat is something
+   * you notice instead of something you find out about later.
+   */
+  protected hasJustChanged(seat: SeatView): boolean {
+    return this.liveStatuses().has(seat.eventSeatId);
+  }
 
   protected isSelected(seat: SeatView): boolean {
     return this.selectedIds().has(seat.eventSeatId);
@@ -241,7 +275,7 @@ export class SeatMapPage {
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(seat.priceMinor / 100);
-    return `${seat.label} — ${price} — ${seat.status.toLowerCase()}`;
+    return `${seat.label} · ${price} · ${seat.status.toLowerCase()}`;
   }
 
   private begin(): void {
@@ -256,7 +290,7 @@ export class SeatMapPage {
 
   /**
    * The server answers failures with an RFC 9457 problem document, so the
-   * message shown is the one it wrote -- "Seat A1 is no longer available" rather
+   * message shown is the one it wrote, "Seat A1 is no longer available" rather
    * than a status code the customer has to interpret.
    */
   private failed(failure: unknown): void {

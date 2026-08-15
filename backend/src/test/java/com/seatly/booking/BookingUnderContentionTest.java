@@ -50,7 +50,7 @@ import static org.mockito.BDDMockito.given;
  * <h2>The Redis guard is switched off here</h2>
  *
  * {@link SeatHoldGuard} would reject seven of these callers before they reached
- * the database, which is what it is for -- and it would also mean this test
+ * the database, which is what it is for, and it would also mean this test
  * proved nothing about the database. It is stubbed to the answer it gives when
  * Redis is unreachable: no opinion, carry on. Everything measured below is the
  * database's doing, which is the claim worth being able to make.
@@ -147,7 +147,7 @@ class BookingUnderContentionTest extends IntegrationTest {
 	/**
 	 * The alternative: no lock, but a version check on the update.
 	 * <p>
-	 * Also correct -- the losing transactions fail rather than overwrite. The
+	 * Also correct: the losing transactions fail rather than overwrite. The
 	 * difference is what the losers spend before they find out: they do the whole
 	 * booking and throw it away, where a pessimistic caller simply waits.
 	 */
@@ -206,7 +206,7 @@ class BookingUnderContentionTest extends IntegrationTest {
 	 * And the belt to the application's braces.
 	 * <p>
 	 * This runs the unlocked sequence that used to sell the same chair eight
-	 * times -- check, then write, with nothing held in between. The partial
+	 * times, check, then write, with nothing held in between. The partial
 	 * unique index refuses every claim after the first, so even an implementation
 	 * that gets the concurrency wrong cannot leave the data wrong.
 	 */

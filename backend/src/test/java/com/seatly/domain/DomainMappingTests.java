@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Checks that the object model and the migrated schema actually agree -- on
+ * Checks that the object model and the migrated schema actually agree: on
  * cascades, on fetch plans, on how enums are stored, and on which invariants the
  * database refuses to let through.
  * <p>

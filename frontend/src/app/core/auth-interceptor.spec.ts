@@ -69,7 +69,7 @@ describe('authInterceptor', () => {
   /**
    * The reason the queue exists. Refreshing per 401 would spend several refresh
    * tokens against a server that rotates them, and every one after the first
-   * looks exactly like a replayed token -- which ends the session.
+   * looks exactly like a replayed token, which ends the session.
    */
   it('refreshes once for a burst of expired requests', () => {
     signIn();

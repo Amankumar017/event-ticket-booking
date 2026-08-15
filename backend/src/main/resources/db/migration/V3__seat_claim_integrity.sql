@@ -8,7 +8,7 @@
 
 -- Optimistic locking support. Hibernate stamps this on every update and refuses
 -- one whose expected version has moved on. It matters for write paths that do
--- not take a lock -- the expiry job in stage 6, for one.
+-- not take a lock, the expiry job in stage 6, for one.
 alter table event_seat
     add column version bigint not null default 0;
 
@@ -21,7 +21,7 @@ alter table booking_seat
 --
 -- A plain unique constraint on event_seat_id would be wrong. It would also
 -- count claims from cancelled bookings, so releasing a seat would mean deleting
--- the row that records who once held it -- and the chair could never be resold
+-- the row that records who once held it, and the chair could never be resold
 -- without destroying that history. The partial index only sees live claims.
 create unique index booking_seat_one_live_claim_per_seat
     on booking_seat (event_seat_id)

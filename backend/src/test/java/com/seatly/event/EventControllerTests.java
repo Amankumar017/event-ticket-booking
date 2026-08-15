@@ -23,12 +23,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Web slice: routing, serialisation and error translation only.
  * <p>
- * No database and no Spring Data here -- the service is mocked, so a failure in
+ * No database and no Spring Data here, the service is mocked, so a failure in
  * this class points at the HTTP layer and nothing else. The trade is that it
  * proves nothing about whether the query is right, which is what
  * {@code EventApiIntegrationTests} is for.
  */
-// The slice loads controllers, not arbitrary configuration -- so without this
+// The slice loads controllers, not arbitrary configuration, so without this
 // import the default "deny everything" chain applies and every browse is a 401.
 @WebMvcTest(EventController.class)
 @Import(SecurityConfiguration.class)

@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <h2>What it measures, and what it proves</h2>
  *
- * The numbers -- throughput, latency -- describe this laptop and are worth
+ * The numbers, throughput, latency, describe this laptop and are worth
  * little on their own. The assertions are the point: whatever the numbers turn
  * out to be, no seat is ever claimed twice and no request fails with an error.
  * A run that is slower than the last one is information; a run that oversells a
@@ -112,7 +112,7 @@ class SeatRushLoadTest extends IntegrationTest {
 
 	/**
 	 * Everybody wants the same seat. This is the contention case, and the one the
-	 * whole project exists for -- stage 5's eight contenders, at twenty-five
+	 * whole project exists for, stage 5's eight contenders, at twenty-five
 	 * times the size.
 	 */
 	@Test

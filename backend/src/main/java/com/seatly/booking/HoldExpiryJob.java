@@ -31,7 +31,7 @@ import java.util.List;
  * What the job does is make the stored state say the same thing: statuses back
  * to AVAILABLE, claims marked dead, bookings marked EXPIRED. Reports, indexes
  * and the audit query all read the stored state, so leaving it stale would be
- * its own kind of wrong -- it just would not oversell anything.
+ * its own kind of wrong; it just would not oversell anything.
  */
 @Component
 public class HoldExpiryJob {
@@ -82,7 +82,7 @@ public class HoldExpiryJob {
 		for (Long bookingId : lapsed) {
 			// Through the proxy, so each booking really does get its own
 			// transaction. Calling releaseOne(id) directly would run inside this
-			// method's caller instead -- the classic self-invocation trap, where
+			// method's caller instead: the classic self-invocation trap, where
 			// @Transactional silently does nothing.
 			if (self.releaseOne(bookingId, now)) {
 				released++;

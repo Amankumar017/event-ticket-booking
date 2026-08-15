@@ -1,53 +1,76 @@
-<a class="back" routerLink="/">← All events</a>
+<a class="back" routerLink="/">← What's on</a>
 
 @if (map.isLoading()) {
-  <p class="state">Loading the seating chart…</p>
+  <p class="state">Opening the house…</p>
 } @else if (map.error()) {
-  <p class="state state--error">That event could not be loaded.</p>
+  <div class="state state--error">
+    <p>Can't load the seating chart.</p>
+    <button type="button" class="ghost-button" (click)="map.reload()">Try again</button>
+  </div>
 } @else {
   @if (liveMap(); as seatMap) {
-    <header class="event-header">
-      <h1>{{ seatMap.title }}</h1>
-      <p class="event-header__meta">
-        {{ seatMap.venueName }}, {{ seatMap.city }} ·
-        {{ seatMap.startsAt | date: 'EEE d MMM y, h:mm a' }}
+    <header class="bill">
+      <p class="eyebrow">{{ seatMap.startsAt | date: 'EEEE d MMMM' }}</p>
+      <h1 class="bill__title">{{ seatMap.title }}</h1>
+      <p class="bill__meta">
+        {{ seatMap.venueName }}, {{ seatMap.city }}
+        <span class="bill__dot">·</span>
+        {{ seatMap.startsAt | date: 'h:mm a' }}
       </p>
     </header>
 
-    <div class="stage">Stage</div>
+    <!--
+      The stage is the light source for everything below it. Sections carry a
+      depth, and the further back they sit the less of it reaches them, which
+      is also, exactly, why they cost less.
+    -->
+    <div class="house">
+      <div class="stage" aria-hidden="true">
+        <span class="stage__label">Stage</span>
+      </div>
 
-    @for (section of seatMap.sections; track section.name) {
-      <section class="section">
-        <h2 class="section__name">{{ section.name }}</h2>
-        @for (row of section.rows; track row.label) {
-          <div class="row">
-            <span class="row__label">{{ row.label }}</span>
-            @for (seat of row.seats; track seat.eventSeatId) {
-              <button
-                type="button"
-                class="seat"
-                [class.seat--available]="seat.status === 'AVAILABLE'"
-                [class.seat--held]="seat.status === 'HELD'"
-                [class.seat--sold]="seat.status === 'SOLD'"
-                [class.seat--blocked]="seat.status === 'BLOCKED'"
-                [class.seat--selected]="isSelected(seat)"
-                [disabled]="seat.status !== 'AVAILABLE'"
-                [attr.aria-pressed]="isSelected(seat)"
-                [attr.aria-label]="seatTitle(seat)"
-                [title]="seatTitle(seat)"
-                (click)="toggle(seat)"
-              >
-                {{ seat.number }}
-              </button>
+      <div class="seating">
+        @for (section of seatMap.sections; track section.name) {
+          <section class="section" [attr.data-depth]="section.displayOrder">
+            <div class="section__header">
+              <h2 class="section__name">{{ section.name }}</h2>
+              <span class="section__price money">
+                {{ priceOf(section) | minorCurrency: seatMap.currency }}
+              </span>
+            </div>
+
+            @for (row of section.rows; track row.label) {
+              <div class="row">
+                <span class="row__label">{{ row.label }}</span>
+                @for (seat of row.seats; track seat.eventSeatId) {
+                  <button
+                    type="button"
+                    class="seat"
+                    [class.seat--available]="seat.status === 'AVAILABLE'"
+                    [class.seat--held]="seat.status === 'HELD'"
+                    [class.seat--sold]="seat.status === 'SOLD'"
+                    [class.seat--blocked]="seat.status === 'BLOCKED'"
+                    [class.seat--selected]="isSelected(seat)"
+                    [class.seat--changed]="hasJustChanged(seat)"
+                    [disabled]="seat.status !== 'AVAILABLE'"
+                    [attr.aria-pressed]="isSelected(seat)"
+                    [attr.aria-label]="seatTitle(seat)"
+                    [title]="seatTitle(seat)"
+                    (click)="toggle(seat)"
+                  >
+                    {{ seat.number }}
+                  </button>
+                }
+              </div>
             }
-          </div>
+          </section>
         }
-      </section>
-    }
+      </div>
+    </div>
 
     <ul class="legend">
-      <li><span class="swatch seat--available"></span> Available</li>
-      <li><span class="swatch seat--selected"></span> Selected</li>
+      <li><span class="swatch seat--available"></span> Free</li>
+      <li><span class="swatch seat--selected"></span> Yours</li>
       <li><span class="swatch seat--held"></span> On hold</li>
       <li><span class="swatch seat--sold"></span> Sold</li>
     </ul>
@@ -61,18 +84,17 @@
         @switch (held.status) {
           @case ('PENDING') {
             @if (holdHasLapsed()) {
-              <span class="summary__text">
-                Your hold on
-                {{ held.seats.length }} seat{{ held.seats.length === 1 ? '' : 's' }} has expired.
-              </span>
-              <button type="button" class="summary__action" (click)="startAgain()">
-                Choose again
+              <span class="summary__text">Your hold ran out. The seats are back on sale.</span>
+              <button type="button" class="ghost-button" (click)="startAgain()">
+                Choose seats
               </button>
             } @else {
               <span class="summary__text">
-                Holding {{ held.seats.length }} seat{{ held.seats.length === 1 ? '' : 's' }} ·
-                {{ held.totalMinor | minorCurrency: held.currency }} ·
-                <strong class="summary__clock">{{ timeLeft() }}</strong> left
+                <span class="summary__seats">{{ seatLabels(held) }}</span>
+                <span class="summary__dot">·</span>
+                <span class="money">{{ held.totalMinor | minorCurrency: held.currency }}</span>
+                <span class="summary__dot">·</span>
+                <strong class="summary__clock">{{ timeLeft() }}</strong> left to pay
               </span>
               <span class="summary__buttons">
                 <button
@@ -96,24 +118,24 @@
           }
           @case ('CONFIRMED') {
             <span class="summary__text">
-              Booked · reference <strong>{{ held.reference }}</strong> ·
-              {{ held.totalMinor | minorCurrency: held.currency }}
+              <span class="summary__seats">{{ seatLabels(held) }}</span> are yours
+              <span class="summary__dot">·</span>
+              <span class="money">{{ held.reference }}</span>
             </span>
-            <button type="button" class="summary__action" (click)="startAgain()">Done</button>
+            <button type="button" class="ghost-button" (click)="startAgain()">Done</button>
           }
           @default {
             <span class="summary__text">This booking is {{ held.status.toLowerCase() }}.</span>
-            <button type="button" class="summary__action" (click)="startAgain()">
-              Choose again
-            </button>
+            <button type="button" class="ghost-button" (click)="startAgain()">Choose seats</button>
           }
         }
       </div>
     } @else if (selectedCount() > 0) {
       <div class="summary">
         <span class="summary__text">
-          {{ selectedCount() }} seat{{ selectedCount() === 1 ? '' : 's' }} ·
-          {{ selectedTotalMinor() | minorCurrency: seatMap.currency }}
+          <span class="summary__seats">{{ selectedLabels() }}</span>
+          <span class="summary__dot">·</span>
+          <span class="money">{{ selectedTotalMinor() | minorCurrency: seatMap.currency }}</span>
         </span>
         <button
           type="button"

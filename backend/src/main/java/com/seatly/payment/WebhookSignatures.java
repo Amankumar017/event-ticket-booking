@@ -53,7 +53,7 @@ public class WebhookSignatures {
 	 * <p>
 	 * The comparison is {@link MessageDigest#isEqual}, not {@code equals}. A
 	 * normal string comparison stops at the first differing character, and the
-	 * time it takes leaks how much of a guess was right -- enough, over many
+	 * time it takes leaks how much of a guess was right: enough, over many
 	 * attempts, to reconstruct a valid signature one character at a time.
 	 */
 	public boolean isValid(String payload, String presentedSignature) {

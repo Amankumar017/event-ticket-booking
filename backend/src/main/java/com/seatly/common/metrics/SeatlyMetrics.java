@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
  * <h2>Tags are bounded</h2>
  *
  * Every tag value below comes from a fixed set. A tag carrying a seat id or a
- * booking reference would create a new time series per seat -- the cardinality
+ * booking reference would create a new time series per seat: the cardinality
  * explosion that turns a metrics backend into an outage.
  */
 @Component

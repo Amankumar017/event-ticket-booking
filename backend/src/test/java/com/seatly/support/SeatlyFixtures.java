@@ -107,7 +107,7 @@ public class SeatlyFixtures {
 	/**
 	 * Wipes every domain table, and the Redis guard keys with them.
 	 * <p>
-	 * Needed by tests that cannot roll back -- a concurrency test has to commit
+	 * Needed by tests that cannot roll back, a concurrency test has to commit
 	 * its transactions for the race to exist at all.
 	 * <p>
 	 * Redis has to be cleared too. {@code restart identity} hands the next test

@@ -28,7 +28,7 @@ import java.util.Map;
  * <p>
  * One shape for every error means a client can handle failures generically
  * instead of guessing at whatever each endpoint happens to return. The
- * {@code type} URI is what callers should branch on -- status codes are too
+ * {@code type} URI is what callers should branch on: status codes are too
  * coarse to distinguish "seat already taken" from "event not found".
  */
 @RestControllerAdvice

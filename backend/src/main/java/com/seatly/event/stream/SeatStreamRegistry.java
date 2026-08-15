@@ -27,7 +27,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * People close tabs, walk into tunnels, and sit behind proxies with opinions
  * about idle sockets. Every emitter therefore cleans itself up on completion,
  * timeout and error, and any send that throws removes the emitter there and
- * then -- a registry that only forgets connections when asked politely grows
+ * then. A registry that only forgets connections when asked politely grows
  * until the heap runs out.
  */
 @Component

@@ -1,4 +1,14 @@
-<h1>{{ registering() ? 'Create an account' : 'Sign in' }}</h1>
+<header class="masthead-block">
+  <p class="eyebrow">Box office</p>
+  <h1>{{ registering() ? 'Open an account' : 'Sign in' }}</h1>
+  <p>
+    {{
+      registering()
+        ? 'Your bookings are kept against this account.'
+        : 'Seats are held against your account while you pay.'
+    }}
+  </p>
+</header>
 
 <form class="form" (ngSubmit)="submit()">
   @if (registering()) {
@@ -47,7 +57,7 @@
   }
 
   <button type="submit" class="submit" [disabled]="working()">
-    {{ registering() ? 'Create account' : 'Sign in' }}
+    {{ registering() ? 'Open account' : 'Sign in' }}
   </button>
 </form>
 
@@ -57,6 +67,6 @@
     <button type="button" class="link" (click)="toggleMode()">Sign in</button>
   } @else {
     New here?
-    <button type="button" class="link" (click)="toggleMode()">Create an account</button>
+    <button type="button" class="link" (click)="toggleMode()">Open an account</button>
   }
 </p>

@@ -45,7 +45,7 @@ public class Event extends BaseEntity {
 	/**
 	 * STRING, never ORDINAL. Ordinal storage writes the enum's position, so
 	 * inserting a new constant in the middle of the enum silently reinterprets
-	 * every existing row -- a data corruption bug with no error message.
+	 * every existing row: a data corruption bug with no error message.
 	 */
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false, length = 20)

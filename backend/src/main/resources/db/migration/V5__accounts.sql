@@ -21,8 +21,8 @@ create unique index app_user_email_unique on app_user (lower(email));
 -- Refresh tokens are stored as SHA-256 hashes, never in the clear.
 --
 -- The value only ever exists in the cookie held by the browser it was issued to.
--- Anyone reading this table -- a leaked backup, an over-broad support query, a
--- SQL injection that gets as far as a SELECT -- comes away with nothing they can
+-- Anyone reading this table, a leaked backup, an over-broad support query, a
+-- SQL injection that gets as far as a SELECT, comes away with nothing they can
 -- present as a token.
 create table refresh_token (
     id          bigint generated always as identity primary key,

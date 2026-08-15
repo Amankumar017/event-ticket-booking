@@ -131,7 +131,8 @@ describe('SeatMapPage holding seats', () => {
     await holdA1(fixture, heldBooking());
 
     const summary = html(fixture).querySelector('.summary__text');
-    expect(summary?.textContent).toContain('Holding 1 seat');
+    expect(summary?.textContent).toContain('A1');
+    expect(summary?.textContent).toContain('left to pay');
     expect(html(fixture).querySelector('.summary__clock')?.textContent).toMatch(/^[45]:\d{2}$/);
   });
 
@@ -215,7 +216,7 @@ describe('SeatMapPage holding seats', () => {
 
     await holdA1(fixture, heldBooking({ expiresAt: new Date(Date.now() - 1000).toISOString() }));
 
-    expect(html(fixture).querySelector('.summary__text')?.textContent).toContain('has expired');
+    expect(html(fixture).querySelector('.summary__text')?.textContent).toContain('ran out');
     expect(html(fixture).querySelector('.summary__action--primary')).toBeNull();
   });
 

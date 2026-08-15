@@ -75,7 +75,7 @@ public class PaymentWebhookService {
 		//
 		// The unique index is still the guarantee. Two deliveries arriving at the
 		// same instant both pass the check, one loses at the index, and its
-		// transaction rolls back whole -- so the provider retries, finds the row
+		// transaction rolls back whole, so the provider retries, finds the row
 		// this time, and skips cleanly. Nothing is half-applied either way.
 		WebhookEvent event = events.save(new WebhookEvent(payload.eventId(), payload.type(), rawBody));
 
@@ -116,7 +116,7 @@ public class PaymentWebhookService {
 	 * <p>
 	 * The booking is confirmed through the same service the customer path uses,
 	 * so the seat locking and the state checks are identical. What differs is
-	 * only who is asking -- there is no signed-in account behind a webhook.
+	 * only who is asking: there is no signed-in account behind a webhook.
 	 */
 	private void settle(Payment payment, Instant now) {
 		payment.succeedAt(now);

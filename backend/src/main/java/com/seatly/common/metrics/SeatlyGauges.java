@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
  * ever been written, which stays reassuring while nothing is being sent.
  * <p>
  * An outbox depth that climbs means confirmations are not reaching customers
- * even though their bookings are perfectly fine -- exactly the failure that is
+ * even though their bookings are perfectly fine: exactly the failure that is
  * invisible from the outside.
  */
 @Configuration

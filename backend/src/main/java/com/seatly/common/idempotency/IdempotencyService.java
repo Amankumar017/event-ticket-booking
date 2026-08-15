@@ -33,7 +33,7 @@ import java.util.function.Supplier;
  * one wins and proceeds, the other finds the row and is told the request is
  * already in flight.
  * <p>
- * Doing it the other way round -- work, then record the key -- leaves a window
+ * Doing it the other way round, work, then record the key, leaves a window
  * where both callers are mid-payment and neither has recorded anything.
  */
 @Service
@@ -56,7 +56,7 @@ public class IdempotencyService {
 	 * Executes {@code work} unless this key has already been used.
 	 *
 	 * @param key         the client's key; when null the work simply runs
-	 * @param userId      whose key it is -- keys are scoped per account
+	 * @param userId      whose key it is, keys are scoped per account
 	 * @param requestBody the request, hashed so a key reused with different
 	 *                    content can be refused rather than answered wrongly
 	 * @param resultType  the type stored responses are read back as

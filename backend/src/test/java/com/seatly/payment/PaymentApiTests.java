@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * The payment endpoints over HTTP: idempotency keys, and webhook signatures.
  * <p>
- * Not transactional -- the idempotency claim commits in its own transaction on
+ * Not transactional: the idempotency claim commits in its own transaction on
  * purpose, so a test wrapping everything in one would not see what a real caller
  * sees.
  */

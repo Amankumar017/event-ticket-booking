@@ -12,7 +12,7 @@ public interface BookingSeatRepository extends JpaRepository<BookingSeat, Long> 
 	 * Seats that appear on more than one booking.
 	 * <p>
 	 * The audit query for the whole project. On a correct system it returns
-	 * nothing, always -- so it doubles as the assertion that the concurrency
+	 * nothing, always: so it doubles as the assertion that the concurrency
 	 * tests make, and as the check worth running against production data.
 	 */
 	@Query("""

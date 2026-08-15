@@ -86,7 +86,7 @@ describe('SeatMapPage', () => {
 
     // Answer first, settle second. The resource publishes its value on a
     // microtask after the response arrives, so the wait belongs here and not
-    // before the flush -- awaiting earlier tears the request down unanswered.
+    // before the flush, awaiting earlier tears the request down unanswered.
     httpMock.expectOne('/api/events/7/seats').flush(SEAT_MAP);
     await fixture.whenStable();
     fixture.detectChanges();
@@ -126,7 +126,10 @@ describe('SeatMapPage', () => {
 
     const summary = (fixture.nativeElement as HTMLElement).querySelector('.summary__text');
 
-    expect(summary?.textContent).toContain('2 seats');
+    // The counter names the seats rather than counting them: "A1, E1" is what
+    // the customer is about to be handed.
+    expect(summary?.textContent).toContain('A1');
+    expect(summary?.textContent).toContain('E1');
     expect(summary?.textContent).toContain('1,800');
   });
 

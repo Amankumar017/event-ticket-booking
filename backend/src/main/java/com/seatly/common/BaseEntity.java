@@ -14,7 +14,7 @@ import java.time.Instant;
 /**
  * Identity and audit timestamps shared by every persistent entity.
  * <p>
- * {@code createdAt} and {@code updatedAt} are owned by the database -- column
+ * {@code createdAt} and {@code updatedAt} are owned by the database, column
  * defaults set them on insert, and the {@code set_updated_at} trigger from V1
  * maintains them on update. The {@code @Generated} annotation tells Hibernate to
  * read the values back rather than assume it knows them, so an in-memory entity
@@ -72,8 +72,8 @@ public abstract class BaseEntity {
 
 	/**
 	 * Constant per entity type on purpose. A hash code must not change while the
-	 * object sits in a collection, and an entity's id does change -- from null to
-	 * a real value -- the moment it is persisted. Hashing on the id would strand
+	 * object sits in a collection, and an entity's id does change, from null to
+	 * a real value, the moment it is persisted. Hashing on the id would strand
 	 * entities in the wrong bucket of any {@code HashSet} they were added to
 	 * before the flush.
 	 */

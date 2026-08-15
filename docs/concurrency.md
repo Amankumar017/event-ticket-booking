@@ -55,7 +55,7 @@ bookings holding the seat: 1
 Seven customers out of eight get an internal server error.
 
 Hibernate flushes the `booking` and `booking_seat` inserts before the
-`event_seat` update — the order is chosen by the persistence context, not by the
+`event_seat` update. The order is chosen by the persistence context, not by the
 order of the statements in the method. Inserting into `booking_seat` takes a
 foreign-key lock on the `event_seat` row it references; the update then needs
 that same row exclusively, while every other transaction is holding a
@@ -75,10 +75,10 @@ want the same seat.
 
 ## Outcome two: the same logic, writes reordered
 
-Send the seat update before the inserts — what you get from an explicit flush, or
-from writing the update as a query instead of through the persistence context.
-The deadlock disappears, because the transactions now queue on a single exclusive
-row lock instead of waiting on each other.
+Send the seat update before the inserts, which is what you get from an explicit
+flush, or from writing the update as a query instead of through the persistence
+context. The deadlock disappears, because the transactions now queue on a single
+exclusive row lock instead of waiting on each other.
 
 ```
 told "the seat is yours" : 8
@@ -90,7 +90,7 @@ seats sold more than once: 1
 
 Eight confirmed bookings. One chair. Zero errors, zero warnings, nothing unusual
 in the log. Each transaction blocks on the row lock, waits its turn, re-reads the
-row after the previous one commits — and then applies an update whose `WHERE`
+row after the previous one commits, and then applies an update whose `WHERE`
 clause only names the primary key, so the decision it made before it waited is
 never revisited.
 
@@ -152,7 +152,7 @@ Two details in that statement carry the whole fix.
 **`for no key update`, not `for update`.** This is Hibernate's PostgreSQL
 rendering of `PESSIMISTIC_WRITE`, and it is weaker on purpose: it excludes other
 bookers but still permits the `for key share` locks that foreign key checks
-take. That is precisely the lock the `booking_seat` insert needs on this row —
+take. That is precisely the lock the `booking_seat` insert needs on this row,
 so the cycle that deadlocked the unlocked version cannot form. A stricter
 `for update` would have reintroduced it.
 
@@ -169,14 +169,14 @@ failures      : 0
 
 ## Why not optimistic locking
 
-It works — one seller, seven losers, no double sale. The difference is what the
+It works: one seller, seven losers, no double sale. The difference is what the
 losers spend before finding out. An optimistic caller does the entire booking
 and then discards it; a pessimistic one waits and does the work once. On a single
 row that many people want simultaneously, waiting is cheaper and the answer is
 clearer.
 
 The `@Version` column stays anyway. It costs nothing and it guards the write
-paths that do not take a lock — the hold-expiry job in stage 6 among them.
+paths that do not take a lock, the hold-expiry job in stage 6 among them.
 
 ## The database's own guarantee
 
@@ -213,7 +213,7 @@ second question: when exactly does a hold stop counting?
 
 **The deadline is the answer, not the job.** `EventSeat.isClaimableAt` works it
 out from `held_until`, so a lapsed seat is available the instant its deadline
-passes — whether or not the expiry job has run, is running late, or has never
+passes, whether or not the expiry job has run, is running late, or has never
 been started. The job only makes the *stored* state agree: statuses back to
 AVAILABLE, claims retired, bookings marked EXPIRED. Reports and indexes read
 stored state, so leaving it stale would be its own kind of wrong; it just would
@@ -229,8 +229,8 @@ ERROR: duplicate key value violates unique constraint "booking_seat_one_live_cla
   Detail: Key (event_seat_id)=(1) already exists.
 ```
 
-Waiting for the job would have been the wrong fix — it would make the deadline
-advisory again. Instead whoever takes the seat retires the claim they are
+Waiting for the job would have been the wrong fix, because it would make the
+deadline advisory again. Instead whoever takes the seat retires the claim they are
 superseding, in the same transaction, under the same lock. And the retirement has
 to be flushed before the new claim is inserted, because Hibernate would otherwise
 send the insert first and have the database reject it against the very row being
@@ -258,6 +258,5 @@ rather than the lock they exist to prove.
 One property is worth stating plainly, because it is the reason the guard cannot
 be trusted with the decision: its TTL runs on Redis's wall clock, which the
 application's injected `Clock` cannot move. In production both run on real time
-and lapse together. In a test that fast-forwards six minutes, they disagree —
-and a design where the two disagreeing could oversell a seat would be a bad
-design.
+and lapse together. In a test that fast-forwards six minutes, they disagree, and
+a design where the two disagreeing could oversell a seat would be a bad design.

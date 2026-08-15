@@ -36,7 +36,7 @@ public class SeatStreamController {
 	 * <h2>Open, like the chart itself</h2>
 	 *
 	 * Anybody may watch a seating chart, so this needs no account. It carries
-	 * nothing an anonymous visitor could not already see by reloading the page --
+	 * nothing an anonymous visitor could not already see by reloading the page:
 	 * seat ids and statuses, no customer, no booking reference.
 	 */
 	@GetMapping(path = "/{eventId}/seats/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

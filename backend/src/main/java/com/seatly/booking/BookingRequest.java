@@ -12,7 +12,7 @@ import java.util.List;
  * <h2>No customer details</h2>
  *
  * This used to carry a name and an email address, which meant the request said
- * who was buying -- and anybody could say anything. Identity now comes from the
+ * who was buying, and anybody could say anything. Identity now comes from the
  * verified access token, and this record says only what to buy.
  * <p>
  * Prices are absent for the same reason: what a seat costs is decided by the

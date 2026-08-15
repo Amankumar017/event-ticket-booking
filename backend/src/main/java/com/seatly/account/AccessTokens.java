@@ -17,15 +17,15 @@ import java.time.Instant;
  *
  * The subject is the account id, and the only other claim is the role. An access
  * token is read by anything holding it, so it carries what is needed to
- * authorise a call and nothing else -- no email, no name, nothing that would
+ * authorise a call and nothing else: no email, no name, nothing that would
  * turn a leaked token into a leak of personal data.
  *
  * <h2>Why it is short-lived</h2>
  *
  * Nothing can revoke a signed token before it expires; that is the trade made
  * for not hitting the database on every request. Fifteen minutes bounds the
- * damage. Anything that must take effect immediately -- a ban, a sign-out
- * everywhere -- is enforced on the refresh path, which does read the database.
+ * damage. Anything that must take effect immediately (a ban, a sign-out
+ * everywhere) is enforced on the refresh path, which does read the database.
  */
 @Component
 public class AccessTokens {

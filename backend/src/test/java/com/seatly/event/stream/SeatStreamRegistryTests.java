@@ -26,7 +26,7 @@ class SeatStreamRegistryTests {
 
 	/**
 	 * Removal on completion and timeout is wired to callbacks the servlet
-	 * container fires, and there is no container here -- calling
+	 * container fires, and there is no container here, calling
 	 * {@code complete()} on a bare emitter does nothing at all. The two paths
 	 * below cover what actually happens in practice: a browser that goes away is
 	 * noticed the next time something is sent to it.

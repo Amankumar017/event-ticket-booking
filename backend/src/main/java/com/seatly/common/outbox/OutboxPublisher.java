@@ -27,7 +27,7 @@ import java.util.List;
  * out carries a {@code sent_at} and is never picked up twice.
  * <p>
  * This is at-least-once, not exactly-once. A crash between sending and recording
- * the send means one duplicate email -- which is why the thing on the other end
+ * the send means one duplicate email, which is why the thing on the other end
  * of a pattern like this should tolerate repeats.
  */
 @Component

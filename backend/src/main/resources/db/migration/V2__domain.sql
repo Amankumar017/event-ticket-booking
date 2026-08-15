@@ -1,8 +1,8 @@
 -- Domain schema.
 --
 -- The shape here is driven by one requirement: selling a numbered seat must be
--- decidable by looking at a single row. That row is event_seat -- the seat as it
--- exists for one particular event -- and it is the row every booking attempt
+-- decidable by looking at a single row. That row is event_seat, the seat as it
+-- exists for one particular event, and it is the row every booking attempt
 -- will contend on from stage 4 onwards.
 --
 -- Physical layout (venue -> seat_section -> seat) is separate from sellable
@@ -110,7 +110,7 @@ create index booking_seat_by_event_seat on booking_seat (event_seat_id);
 -- NOTE: booking_seat deliberately has no unique constraint on event_seat_id yet.
 -- That constraint is the database's own guarantee that a seat cannot be sold
 -- twice, and it arrives in stage 5 alongside the locking work. Adding it here
--- would mask the race condition stage 4 sets out to measure -- the point of the
+-- would mask the race condition stage 4 sets out to measure, the point of the
 -- exercise is to show the failure first, with evidence, and only then fix it.
 
 create trigger venue_set_updated_at before update on venue

@@ -136,7 +136,7 @@ public class SeedDataRunner implements ApplicationRunner {
 		return venue;
 	}
 
-	/** Stalls at Rs 1,200, balcony at Rs 600 -- held as paise, never as rupees. */
+	/** Stalls at Rs 1,200, balcony at Rs 600. Held as paise, never as rupees. */
 	private List<EventSeat> priceSeats(Event event, Venue venue) {
 		List<EventSeat> priced = new ArrayList<>();
 		for (SeatSection section : venue.getSections()) {

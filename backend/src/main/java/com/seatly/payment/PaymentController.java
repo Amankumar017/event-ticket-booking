@@ -35,7 +35,7 @@ public class PaymentController {
 	 * the same answer rather than opening a second one.
 	 * <p>
 	 * The header is optional because this particular endpoint is already safe to
-	 * repeat -- a booking may only have one open attempt, enforced by a partial
+	 * repeat: a booking may only have one open attempt, enforced by a partial
 	 * unique index. The key is what makes that guarantee explicit to the caller
 	 * instead of something they have to know about the implementation.
 	 */
